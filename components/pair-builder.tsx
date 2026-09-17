@@ -1,0 +1,123 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useState, useTransition } from 'react';
+
+import { createPair } from '@/app/actions/zmanim';
+import type { Role } from '@/lib/types';
+
+import { Button, inputClasses } from './ui';
+import { useToast } from './toast';
+
+export interface PickablePerson {
+  id: string;
+  name: string;
+  role: Role;
+}
+
+/**
+ * Make a pair by picking two or more people. The label defaults to their
+ * names joined with "&", which is what you'd have written anyway.
+ */
+export function PairBuilder({
+  zmanId,
+  people,
+}: {
+  zmanId: string;
+  people: PickablePerson[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [label, setLabel] = useState('');
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+  const toast = useToast();
+
+  function toggle(id: string) {
+    setPicked((current) =>
+      current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
+    );
+  }
+
+  if (!open) {
+    return (
+      <div className="px-4 pt-3">
+        <Button className="px-0" onClick={() => setOpen(true)}>
+          Add a pair
+        </Button>
+      </div>
+    );
+  }
+
+  const defaultLabel = picked
+    .map((id) => people.find((person) => person.id === id)?.name ?? '')
+    .filter(Boolean)
+    .join(' & ');
+
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        const form = new FormData();
+        for (const id of picked) form.append('person_ids', id);
+        form.set('label', label.trim());
+        startTransition(async () => {
+          try {
+            await createPair(zmanId, form);
+            setPicked([]);
+            setLabel('');
+            setOpen(false);
+            router.refresh();
+          } catch {
+            toast("Couldn't save the pair.");
+          }
+        });
+      }}
+      className="mx-4 mt-3 rounded-xl bg-surface p-4"
+    >
+      <p className="mb-2 text-[13px] text-ink-secondary">Pick two or more people</p>
+
+      <div className="mb-3 max-h-64 divide-y divide-hairline overflow-y-auto rounded-lg border border-hairline">
+        {people.length === 0 ? (
+          <p className="px-3 py-2.5 text-[15px] text-ink-secondary">
+            Everyone active is already paired.
+          </p>
+        ) : (
+          people.map((person) => (
+            <label key={person.id} className="flex min-h-[2.75rem] items-center gap-3 px-3 py-2">
+              <input
+                type="checkbox"
+                checked={picked.includes(person.id)}
+                onChange={() => toggle(person.id)}
+                className="h-5 w-5 accent-[var(--accent)]"
+              />
+              <span className="flex-1 text-[17px]">{person.name}</span>
+              <span className="text-[13px] text-ink-tertiary">
+                {person.role === 'rabbi' ? 'R' : 'W'}
+              </span>
+            </label>
+          ))
+        )}
+      </div>
+
+      <label className="mb-3 block">
+        <span className="mb-1 block text-[13px] text-ink-secondary">Label (optional)</span>
+        <input
+          value={label}
+          onChange={(event) => setLabel(event.target.value)}
+          placeholder={defaultLabel || 'Their names'}
+          className={inputClasses}
+        />
+      </label>
+
+      <div className="flex gap-2">
+        <Button type="submit" variant="filled" disabled={picked.length < 2 || pending}>
+          {pending ? 'Saving' : 'Add pair'}
+        </Button>
+        <Button type="button" onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+      </div>
+    </form>
+  );
+}

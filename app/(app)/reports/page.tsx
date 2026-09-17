@@ -1,0 +1,340 @@
+import Link from 'next/link';
+
+import { DafRangePicker, ZmanPicker } from '@/components/report-pickers';
+import { ReportTable, type ReportRow } from '@/components/report-table';
+import { Empty, ScreenHeader } from '@/components/ui';
+import {
+  attendanceByPerson,
+  heldDatesInRange,
+  missedStreak,
+  notRecordedDates,
+  personStats,
+  scheduledDafMornings,
+  scheduledNights,
+  heldDates as toHeldDates,
+  type AttendanceRow,
+  type PersonWindow,
+} from '@/lib/attendance';
+import {
+  addDays,
+  formatCompactDate,
+  isCalendarDate,
+  minDate,
+  today,
+  type CalendarDate,
+} from '@/lib/dates';
+import {
+  getAllAttendance,
+  getCurrentZman,
+  getDafDaysOff,
+  getPairs,
+  getPeople,
+  getSettings,
+  getZmanDaysOff,
+  getZmanim,
+} from '@/lib/queries';
+import type { Person } from '@/lib/types';
+
+function param(value: string | string[] | undefined): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function windowOf(person: Person): PersonWindow {
+  return { id: person.id, start_date: person.start_date, end_date: person.end_date };
+}
+
+/** Rows for anyone who was either expected or present in the period. */
+function buildRows(
+  people: Person[],
+  held: CalendarDate[],
+  allAttendance: AttendanceRow[],
+  threshold: number,
+  pairOf: (personId: string) => string | null,
+): ReportRow[] {
+  const byPerson = attendanceByPerson(allAttendance);
+  const allHeld = toHeldDates(allAttendance);
+
+  return people
+    .map((person) => {
+      const attended = byPerson.get(person.id);
+      const stats = personStats(windowOf(person), held, attended);
+      const streak = missedStreak(windowOf(person), allHeld, attended);
+      return {
+        id: person.id,
+        name: person.name,
+        role: person.role,
+        pair: pairOf(person.id),
+        attended: stats.attended,
+        expected: stats.expected,
+        percent: stats.percent,
+        flagged: person.active && streak >= threshold,
+        streak,
+      };
+    })
+    .filter((row) => row.expected > 0 || row.attended > 0);
+}
+
+function Summary({ label, held, rows }: { label: string; held: number; rows: ReportRow[] }) {
+  const attended = rows.reduce((sum, row) => sum + row.attended, 0);
+  const expected = rows.reduce((sum, row) => sum + row.expected, 0);
+  const percent = expected === 0 ? 0 : Math.round((attended / expected) * 100);
+
+  return (
+    <section className="px-4 pt-4">
+      <div className="flex divide-x divide-hairline overflow-hidden rounded-xl bg-surface">
+        <div className="flex-1 px-4 py-3">
+          <p className="text-[24px] tabular-nums">{held}</p>
+          <p className="text-[13px] text-ink-secondary">{label}</p>
+        </div>
+        <div className="flex-1 px-4 py-3">
+          <p className="text-[24px] tabular-nums">{percent}%</p>
+          <p className="text-[13px] text-ink-secondary">Attendance</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DateList({
+  title,
+  dates,
+  counts,
+  hrefFor,
+  empty,
+}: {
+  title: string;
+  dates: CalendarDate[];
+  counts?: Map<CalendarDate, number>;
+  hrefFor: (date: CalendarDate) => string;
+  empty: string;
+}) {
+  return (
+    <section className="px-4">
+      <h2 className="px-1 pt-5 pb-2 text-[13px] font-medium text-ink-secondary">{title}</h2>
+      <div className="divide-hairline overflow-hidden rounded-xl bg-surface">
+        {dates.length === 0 ? (
+          <p className="px-4 py-3 text-[15px] text-ink-secondary">{empty}</p>
+        ) : (
+          dates.map((date) => (
+            <Link
+              key={date}
+              href={hrefFor(date)}
+              className="flex min-h-[2.75rem] items-center gap-3 px-4 py-2.5 active:bg-surface-pressed"
+            >
+              <span className="flex-1 text-[15px]">{formatCompactDate(date)}</span>
+              {counts ? (
+                <span className="text-[15px] tabular-nums text-ink-secondary">
+                  {counts.get(date) ?? 0} here
+                </span>
+              ) : null}
+              <span aria-hidden className="text-[17px] leading-none text-ink-tertiary">
+                &rsaquo;
+              </span>
+            </Link>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
+
+export default async function ReportsPage(props: PageProps<'/reports'>) {
+  const searchParams = await props.searchParams;
+  const now = today();
+
+  const [people, settings, zmanim, currentZman, nightAttendance, dafAttendance, dafDaysOff] =
+    await Promise.all([
+      getPeople(),
+      getSettings(),
+      getZmanim(),
+      getCurrentZman(),
+      getAllAttendance('night_attendance'),
+      getAllAttendance('daf_attendance'),
+      getDafDaysOff(),
+    ]);
+
+  // Night Seder ----------------------------------------------------------
+
+  const requestedZman = param(searchParams.zman);
+  const zman =
+    zmanim.find((z) => z.id === requestedZman) ??
+    currentZman ??
+    zmanim[0] ??
+    null;
+
+  const [zmanDaysOff, pairs] = await Promise.all([
+    zman ? getZmanDaysOff(zman.id) : Promise.resolve([]),
+    zman ? getPairs(zman.id) : Promise.resolve([]),
+  ]);
+
+  const pairNameFor = new Map<string, string[]>();
+  for (const pair of pairs) {
+    const label =
+      pair.label ??
+      pair.members
+        .map((member) => people.find((p) => p.id === member.person_id)?.name ?? '')
+        .filter(Boolean)
+        .join(' & ');
+    for (const member of pair.members) {
+      const existing = pairNameFor.get(member.person_id);
+      if (existing) existing.push(label);
+      else pairNameFor.set(member.person_id, [label]);
+    }
+  }
+
+  const nightHeld = zman
+    ? heldDatesInRange(nightAttendance, zman.start_date, minDate(zman.end_date, now))
+    : [];
+  const nightRows = zman
+    ? buildRows(people, nightHeld, nightAttendance, settings.night_absence_threshold, (id) =>
+        pairNameFor.get(id)?.join(', ') ?? null,
+      )
+    : [];
+
+  const nightCounts = new Map<CalendarDate, number>();
+  for (const row of nightAttendance) {
+    nightCounts.set(row.date, (nightCounts.get(row.date) ?? 0) + 1);
+  }
+
+  const nightNotRecorded = zman
+    ? notRecordedDates(scheduledNights(zman, zmanDaysOff), nightAttendance, now)
+    : [];
+
+  // Per pair: attended and expected summed across that pair's members.
+  const pairTotals = pairs.map((pair) => {
+    const members = pair.members
+      .map((member) => nightRows.find((row) => row.id === member.person_id))
+      .filter((row): row is ReportRow => row !== undefined);
+    const attended = members.reduce((sum, row) => sum + row.attended, 0);
+    const expected = members.reduce((sum, row) => sum + row.expected, 0);
+    const label =
+      pair.label ??
+      pair.members
+        .map((member) => people.find((p) => p.id === member.person_id)?.name ?? '')
+        .filter(Boolean)
+        .join(' & ');
+    return {
+      id: pair.id,
+      label,
+      attended,
+      expected,
+      percent: expected === 0 ? 0 : Math.round((attended / expected) * 100),
+    };
+  });
+
+  // Daf ------------------------------------------------------------------
+
+  const dafRange = param(searchParams.daf) ?? '30';
+  const customFrom = param(searchParams.from);
+  const customTo = param(searchParams.to);
+
+  let dafStart: CalendarDate;
+  let dafEnd: CalendarDate = now;
+  if (dafRange === 'month') {
+    dafStart = `${now.slice(0, 7)}-01`;
+  } else if (dafRange === '90') {
+    dafStart = addDays(now, -89);
+  } else if (dafRange === 'custom') {
+    dafStart = isCalendarDate(customFrom) ? customFrom : addDays(now, -29);
+    dafEnd = isCalendarDate(customTo) ? customTo : now;
+  } else {
+    dafStart = addDays(now, -29);
+  }
+
+  const dafHeld = heldDatesInRange(dafAttendance, dafStart, minDate(dafEnd, now));
+  const dafRows = buildRows(
+    people.filter((person) => person.in_daf || dafAttendance.some((row) => row.person_id === person.id)),
+    dafHeld,
+    dafAttendance,
+    settings.daf_absence_threshold,
+    () => null,
+  );
+
+  const dafCounts = new Map<CalendarDate, number>();
+  for (const row of dafAttendance) {
+    dafCounts.set(row.date, (dafCounts.get(row.date) ?? 0) + 1);
+  }
+
+  const dafNotRecorded = notRecordedDates(
+    scheduledDafMornings(dafStart, minDate(dafEnd, now), dafDaysOff),
+    dafAttendance,
+    now,
+  );
+
+  return (
+    <>
+      <ScreenHeader title="Reports" />
+
+      <div className="mx-auto w-full max-w-[480px] pb-tabbar">
+        <h2 className="px-5 pt-5 text-[20px] font-semibold">Night Seder</h2>
+
+        {!zman ? (
+          <Empty>No zman yet. Create one under More to see a report.</Empty>
+        ) : (
+          <>
+            <ZmanPicker zmanim={zmanim} selected={zman.id} />
+            <Summary label="Nights held" held={nightHeld.length} rows={nightRows} />
+            <ReportTable
+              rows={nightRows}
+              showPair
+              filename={`night-seder-${zman.name.toLowerCase().replace(/\s+/g, '-')}.csv`}
+            />
+
+            <section className="px-4">
+              <h2 className="px-1 pt-5 pb-2 text-[13px] font-medium text-ink-secondary">Per pair</h2>
+              <div className="divide-hairline overflow-hidden rounded-xl bg-surface">
+                {pairTotals.length === 0 ? (
+                  <p className="px-4 py-3 text-[15px] text-ink-secondary">No pairs in this zman.</p>
+                ) : (
+                  pairTotals.map((pair) => (
+                    <div key={pair.id} className="flex items-center gap-3 px-4 py-2.5">
+                      <span className="min-w-0 flex-1 truncate text-[17px]">{pair.label}</span>
+                      <span className="shrink-0 text-right text-[15px] tabular-nums text-ink-secondary">
+                        {pair.attended}/{pair.expected} · {pair.percent}%
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
+            <DateList
+              title="Nights held"
+              dates={[...nightHeld].reverse()}
+              counts={nightCounts}
+              hrefFor={(date) => `/?date=${date}`}
+              empty="Nothing recorded in this zman yet."
+            />
+
+            <DateList
+              title="Not recorded"
+              dates={[...nightNotRecorded].reverse()}
+              hrefFor={(date) => `/?date=${date}`}
+              empty="Every scheduled night has something recorded."
+            />
+          </>
+        )}
+
+        <h2 className="px-5 pt-8 text-[20px] font-semibold">Daf</h2>
+        <DafRangePicker range={dafRange} from={dafStart} to={dafEnd} />
+        <Summary label="Mornings held" held={dafHeld.length} rows={dafRows} />
+        <ReportTable rows={dafRows} showPair={false} filename={`daf-${dafStart}-to-${dafEnd}.csv`} />
+
+        <DateList
+          title="Mornings held"
+          dates={[...dafHeld].reverse()}
+          counts={dafCounts}
+          hrefFor={(date) => `/daf?date=${date}`}
+          empty="Nothing recorded in this range yet."
+        />
+
+        <DateList
+          title="Not recorded"
+          dates={[...dafNotRecorded].reverse()}
+          hrefFor={(date) => `/daf?date=${date}`}
+          empty="Every scheduled morning has something recorded."
+        />
+      </div>
+    </>
+  );
+}
