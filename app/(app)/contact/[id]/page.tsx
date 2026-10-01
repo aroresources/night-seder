@@ -67,6 +67,15 @@ export default async function ContactPersonPage(props: PageProps<'/contact/[id]'
             </Row>
           ) : null}
 
+          {person.email ? (
+            <Row>
+              <span className="flex-1 text-[15px]">Email</span>
+              <a href={`mailto:${person.email}`} className="truncate text-[15px] text-accent">
+                {person.email}
+              </a>
+            </Row>
+          ) : null}
+
           <Row>
             <div className="flex-1">
               {person.snoozed_until ? (

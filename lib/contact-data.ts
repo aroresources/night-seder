@@ -65,6 +65,7 @@ export async function loadContactData(): Promise<ContactData> {
       name: person.name,
       role: person.role,
       phone: person.phone,
+      email: person.email,
       active: person.active,
       trackContact: person.track_contact,
       snoozedUntil: person.snoozed_until,

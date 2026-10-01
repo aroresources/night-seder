@@ -27,9 +27,17 @@ export function channelLabel(channel: Channel): string {
 export type Person = {
   id: string;
   created_at: string;
+  first_name: string;
+  middle_name: string | null;
+  last_name: string | null;
+  /**
+   * The three parts joined up. The database generates this, so it can never
+   * drift from them — never write to it.
+   */
   name: string;
   role: Role;
   phone: string | null;
+  email: string | null;
   notes: string | null;
   active: boolean;
   in_night_seder: boolean;
@@ -142,19 +150,24 @@ export type Settings = {
 
 /**
  * `id` and `created_at` always have defaults, so they are never required on an
- * insert; `Required` names the columns that have no default.
+ * insert; `Required` names the columns that have no default, and `Generated`
+ * names the ones the database computes, which cannot be written at all.
  */
-type TableDef<Row extends object, Required extends keyof Row> = {
+type TableDef<
+  Row extends object,
+  Required extends keyof Row,
+  Generated extends keyof Row = never,
+> = {
   Row: Row;
-  Insert: Partial<Omit<Row, 'id' | 'created_at'>> & Pick<Row, Required>;
-  Update: Partial<Omit<Row, 'id' | 'created_at'>>;
+  Insert: Partial<Omit<Row, 'id' | 'created_at' | Generated>> & Pick<Row, Required>;
+  Update: Partial<Omit<Row, 'id' | 'created_at' | Generated>>;
   Relationships: [];
 };
 
 export type Database = {
   public: {
     Tables: {
-      people: TableDef<Person, 'name' | 'role'>;
+      people: TableDef<Person, 'first_name' | 'role', 'name'>;
       zmanim: TableDef<Zman, 'name' | 'start_date' | 'end_date'>;
       zman_days_off: TableDef<ZmanDayOff, 'zman_id' | 'date'>;
       pairs: TableDef<Pair, 'zman_id'>;

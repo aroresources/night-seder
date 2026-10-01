@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 
 import { today } from '@/lib/dates';
 import { parseDollars } from '@/lib/money';
+import { parseFullName, type NameParts } from '@/lib/names';
 import { supabaseServer } from '@/lib/supabase/server';
 import type { Role } from '@/lib/types';
 
@@ -24,15 +25,28 @@ function monthlyAmount(form: FormData): number | null {
   return parseDollars(text(form, 'monthly_amount'));
 }
 
+/**
+ * The three name boxes. Only the first is required; the database joins them
+ * into the display name, so nothing here writes `name` itself.
+ */
+function nameParts(form: FormData): NameParts {
+  const first_name = text(form, 'first_name');
+  if (!first_name) throw new Error('A first name is required');
+  return {
+    first_name,
+    middle_name: optionalText(form, 'middle_name'),
+    last_name: optionalText(form, 'last_name'),
+  };
+}
+
 export async function createPerson(form: FormData) {
   const supabase = await supabaseServer();
-  const name = text(form, 'name');
-  if (!name) throw new Error('A name is required');
 
   const { data, error } = await supabase
     .from('people')
     .insert({
-      name,
+      ...nameParts(form),
+      email: optionalText(form, 'email'),
       role: role(form),
       phone: optionalText(form, 'phone'),
       notes: optionalText(form, 'notes'),
@@ -50,26 +64,29 @@ export async function createPerson(form: FormData) {
   redirect(`/more/people/${data.id}`);
 }
 
-/** Paste a list of names, one per line; role and the Daf flag apply to all. */
+/**
+ * Paste a list of names, one per line; role and the Daf flag apply to all.
+ * Each line is split into first / middle / last, which is a guess — a two-word
+ * surname lands in the middle — but every one is editable afterwards.
+ */
 export async function bulkAddPeople(form: FormData) {
-  const names = text(form, 'names')
+  const parsed = text(form, 'names')
     .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-  if (names.length === 0) throw new Error('Paste at least one name');
+    .map(parseFullName)
+    .filter((parts): parts is NameParts => parts !== null);
+  if (parsed.length === 0) throw new Error('Paste at least one name');
 
   const supabase = await supabaseServer();
-  const start_date = optionalDate(form, 'start_date') ?? today();
   const shared = {
     role: role(form),
     in_night_seder: checkbox(form, 'in_night_seder'),
     in_daf: checkbox(form, 'in_daf'),
-    start_date,
+    start_date: optionalDate(form, 'start_date') ?? today(),
   };
 
   const { error } = await supabase
     .from('people')
-    .insert(names.map((name) => ({ name, ...shared })));
+    .insert(parsed.map((parts) => ({ ...parts, ...shared })));
   if (error) throw new Error(error.message);
 
   refreshEverything();
@@ -78,13 +95,12 @@ export async function bulkAddPeople(form: FormData) {
 
 export async function updatePerson(id: string, form: FormData) {
   const supabase = await supabaseServer();
-  const name = text(form, 'name');
-  if (!name) throw new Error('A name is required');
 
   const { error } = await supabase
     .from('people')
     .update({
-      name,
+      ...nameParts(form),
+      email: optionalText(form, 'email'),
       role: role(form),
       phone: optionalText(form, 'phone'),
       notes: optionalText(form, 'notes'),
@@ -161,13 +177,14 @@ export async function addExistingPersonToDaf(id: string) {
   refreshEverything();
 }
 
+/** The Daf screen's quick add takes one box, so the line gets split like a paste. */
 export async function createPersonForDaf(form: FormData) {
   const supabase = await supabaseServer();
-  const name = text(form, 'name');
-  if (!name) throw new Error('A name is required');
+  const parts = parseFullName(text(form, 'name'));
+  if (!parts) throw new Error('A name is required');
 
   const { error } = await supabase.from('people').insert({
-    name,
+    ...parts,
     role: role(form),
     in_daf: true,
     in_night_seder: checkbox(form, 'in_night_seder'),

@@ -9,7 +9,7 @@ export default function BulkAddPage() {
     <>
       <ScreenHeader
         title="Paste a list"
-        subtitle="One name per line"
+        subtitle="One full name per line"
         action={
           <Link href="/more/people" className="text-[17px] text-accent">
             People
@@ -27,9 +27,13 @@ export default function BulkAddPage() {
                 rows={10}
                 required
                 autoFocus
-                placeholder={'Dovid Cohen\nMoshe Levy\nYaakov Stern'}
+                placeholder={'Dovid Cohen\nMoshe Chaim Levy\nYaakov Stern'}
                 className={inputClasses}
               />
+              <span className="mt-1 block text-[13px] text-ink-tertiary">
+                The first word is the first name, the last is the surname, anything between is
+                the middle. Fix any it gets wrong on the person&apos;s page.
+              </span>
             </label>
 
             <label className="block px-4 py-2.5">

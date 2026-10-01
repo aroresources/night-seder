@@ -19,6 +19,7 @@ export interface ContactRow {
   name: string;
   role: Role;
   phone: string | null;
+  email: string | null;
   active: boolean;
   trackContact: boolean;
   snoozedUntil: string | null;
@@ -236,6 +237,14 @@ function Row({ row }: { row: ContactRow }) {
               className="min-h-[2.75rem] px-4 py-2.5 text-left text-[17px] text-accent active:bg-surface-pressed"
             >
               Call {row.phone}
+            </a>
+          ) : null}
+          {row.email ? (
+            <a
+              href={`mailto:${row.email}`}
+              className="min-h-[2.75rem] truncate px-4 py-2.5 text-left text-[17px] text-accent active:bg-surface-pressed"
+            >
+              Email {row.email}
             </a>
           ) : null}
         </div>

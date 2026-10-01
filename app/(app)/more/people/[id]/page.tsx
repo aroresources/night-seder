@@ -131,6 +131,25 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
         </Group>
 
         <Group title="Contact">
+          {person.phone ? (
+            <Row>
+              <span className="flex-1 text-[15px]">Phone</span>
+              <a href={`tel:${person.phone}`} className="text-[15px] text-accent">
+                {person.phone}
+              </a>
+            </Row>
+          ) : null}
+          {person.email ? (
+            <Row>
+              <span className="flex-1 text-[15px]">Email</span>
+              <a
+                href={`mailto:${person.email}`}
+                className="truncate text-[15px] text-accent"
+              >
+                {person.email}
+              </a>
+            </Row>
+          ) : null}
           <Row>
             <span className="flex-1 text-[15px]">Last contact</span>
             <span className="text-[15px] text-ink-secondary">

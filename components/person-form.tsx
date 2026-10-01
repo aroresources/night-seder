@@ -19,12 +19,34 @@ export function PersonForm({
       <section className="px-4 pt-4">
         <div className="divide-hairline overflow-hidden rounded-xl bg-surface">
           <label className="block px-4 py-2.5">
-            <span className="mb-1 block text-[13px] text-ink-secondary">Name</span>
+            <span className="mb-1 block text-[13px] text-ink-secondary">First name</span>
             <input
-              name="name"
+              name="first_name"
               required
               autoFocus={!person}
-              defaultValue={person?.name ?? ''}
+              defaultValue={person?.first_name ?? ''}
+              className={inputClasses}
+            />
+          </label>
+
+          <label className="block px-4 py-2.5">
+            <span className="mb-1 block text-[13px] text-ink-secondary">
+              Middle name (optional)
+            </span>
+            <input
+              name="middle_name"
+              defaultValue={person?.middle_name ?? ''}
+              className={inputClasses}
+            />
+          </label>
+
+          <label className="block px-4 py-2.5">
+            <span className="mb-1 block text-[13px] text-ink-secondary">
+              Last name (optional)
+            </span>
+            <input
+              name="last_name"
+              defaultValue={person?.last_name ?? ''}
               className={inputClasses}
             />
           </label>
@@ -44,6 +66,19 @@ export function PersonForm({
               type="tel"
               inputMode="tel"
               defaultValue={person?.phone ?? ''}
+              className={inputClasses}
+            />
+          </label>
+
+          <label className="block px-4 py-2.5">
+            <span className="mb-1 block text-[13px] text-ink-secondary">Email (optional)</span>
+            <input
+              name="email"
+              type="email"
+              inputMode="email"
+              autoCapitalize="off"
+              autoCorrect="off"
+              defaultValue={person?.email ?? ''}
               className={inputClasses}
             />
           </label>
