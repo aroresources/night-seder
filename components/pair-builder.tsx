@@ -35,6 +35,8 @@ export function PairBuilder({
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
   const [label, setLabel] = useState('');
+  const [search, setSearch] = useState('');
+  const [showPaired, setShowPaired] = useState(false);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const toast = useToast();
@@ -44,6 +46,16 @@ export function PairBuilder({
       current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
     );
   }
+
+  const needle = search.trim().toLowerCase();
+  // Anyone already ticked stays visible whatever the search and the toggle say,
+  // so a pick can't quietly vanish while you look for the second man.
+  const visible = people.filter(
+    (person) =>
+      picked.includes(person.id) ||
+      ((showPaired || !person.paired) && person.name.toLowerCase().includes(needle)),
+  );
+  const hiddenPaired = people.filter((person) => person.paired && !picked.includes(person.id)).length;
 
   if (!open) {
     return (
@@ -81,15 +93,44 @@ export function PairBuilder({
       }}
       className="mx-4 mt-3 rounded-xl bg-surface p-4"
     >
-      <p className="mb-2 text-[13px] text-ink-secondary">Pick two or more people</p>
+      <p className="mb-2 text-[13px] text-ink-secondary">
+        Pick two or more people{picked.length > 0 ? ` · ${picked.length} picked` : ''}
+      </p>
+
+      <input
+        type="search"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder="Search names"
+        aria-label="Search names"
+        className={`${inputClasses} mb-2`}
+      />
+
+      {hiddenPaired > 0 || showPaired ? (
+        <label className="mb-2 flex min-h-[2.75rem] items-center gap-3">
+          <input
+            type="checkbox"
+            checked={showPaired}
+            onChange={(event) => setShowPaired(event.target.checked)}
+            className="h-5 w-5 accent-[var(--accent)]"
+          />
+          <span className="text-[15px] text-ink-secondary">
+            Include men already in a pair{showPaired ? '' : ` (${hiddenPaired})`}
+          </span>
+        </label>
+      ) : null}
 
       <div className="mb-3 max-h-64 divide-y divide-hairline overflow-y-auto rounded-lg border border-hairline">
-        {people.length === 0 ? (
+        {visible.length === 0 ? (
           <p className="px-3 py-2.5 text-[15px] text-ink-secondary">
-            Nobody active is in night seder yet.
+            {people.length === 0
+              ? 'Nobody active is in night seder yet.'
+              : needle
+                ? 'Nobody matches that name.'
+                : 'Everybody is already paired. Tick the box above to pair someone twice.'}
           </p>
         ) : (
-          people.map((person) => (
+          visible.map((person) => (
             <label key={person.id} className="flex min-h-[2.75rem] items-center gap-3 px-3 py-2">
               <input
                 type="checkbox"

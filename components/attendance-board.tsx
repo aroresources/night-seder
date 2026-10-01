@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useSyncExternalStore } from 'react';
 
 import { supabaseBrowser } from '@/lib/supabase/client';
 import type { AttendanceTable, Role } from '@/lib/types';
@@ -16,6 +16,54 @@ export interface BoardGroup {
   key: string;
   title: string | null;
   people: BoardPerson[];
+  /**
+   * Offer a one-tap "mark both" on the heading. Only for real pairs: on a long
+   * list like "Not paired" it would be a mass-mark one stray tap away.
+   */
+  markAll?: boolean;
+}
+
+type View = 'pairs' | 'flat';
+
+/*
+ * Which view you last chose, remembered between nights.
+ *
+ * localStorage is an external store, not React state: reading it in an effect
+ * would render twice, and reading it while rendering would disagree with the
+ * server. useSyncExternalStore is the thing that handles both — the server and
+ * the first client render both say "pairs", then it settles on what's stored.
+ */
+const VIEW_KEY = 'night-seder:tonight-view';
+
+const viewListeners = new Set<() => void>();
+
+function readView(): View {
+  try {
+    return window.localStorage.getItem(VIEW_KEY) === 'flat' ? 'flat' : 'pairs';
+  } catch {
+    // Private browsing, blocked site data. The default view is fine.
+    return 'pairs';
+  }
+}
+
+function serverView(): View {
+  return 'pairs';
+}
+
+function subscribeToView(listener: () => void) {
+  viewListeners.add(listener);
+  return () => {
+    viewListeners.delete(listener);
+  };
+}
+
+function writeView(view: View) {
+  try {
+    window.localStorage.setItem(VIEW_KEY, view);
+  } catch {
+    // Not worth saying anything about: the view still changes for this visit.
+  }
+  for (const listener of viewListeners) listener();
 }
 
 /**
@@ -32,18 +80,27 @@ export function AttendanceBoard({
   table,
   date,
   groups,
+  flatGroup,
   initialPresent,
 }: {
   table: AttendanceTable;
   date: string;
   groups: BoardGroup[];
+  /** Everyone in one list. Supplying it offers the by-pair / everyone switch. */
+  flatGroup?: BoardGroup;
   initialPresent: string[];
 }) {
   const toast = useToast();
   const [present, setPresent] = useState<ReadonlySet<string>>(() => new Set(initialPresent));
+  const view = useSyncExternalStore(subscribeToView, readView, serverView);
   const queues = useRef(new Map<string, Promise<unknown>>());
 
-  const everyone = new Set(groups.flatMap((group) => group.people.map((p) => p.id)));
+  const shown = flatGroup && view === 'flat' ? [flatGroup] : groups;
+  const everyone = new Set(
+    (flatGroup ? [flatGroup, ...groups] : groups).flatMap((group) =>
+      group.people.map((person) => person.id),
+    ),
+  );
   const hereCount = [...everyone].filter((id) => present.has(id)).length;
 
   function apply(personId: string, shouldBePresent: boolean) {
@@ -55,9 +112,9 @@ export function AttendanceBoard({
     });
   }
 
-  function toggle(personId: string) {
+  function setPresence(personId: string, shouldBePresent: boolean) {
     const wasPresent = present.has(personId);
-    const shouldBePresent = !wasPresent;
+    if (wasPresent === shouldBePresent) return;
     apply(personId, shouldBePresent);
 
     const write = async () => {
@@ -85,53 +142,100 @@ export function AttendanceBoard({
     queues.current.set(personId, queued);
   }
 
+  /** Mark everyone in a pair at once, or clear them if they are all already here. */
+  function toggleGroup(group: BoardGroup) {
+    const ids = group.people.map((person) => person.id);
+    const allPresent = ids.every((id) => present.has(id));
+    for (const id of ids) setPresence(id, !allPresent);
+  }
+
   return (
     <>
+      {flatGroup ? (
+        <div className="flex gap-2 px-4 pt-4">
+          {(
+            [
+              ['pairs', 'By pair'],
+              ['flat', 'Everyone'],
+            ] as [View, string][]
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => writeView(value)}
+              aria-pressed={view === value}
+              className={`min-h-[2.25rem] rounded-full px-3 text-[15px] ${
+                view === value ? 'bg-accent text-on-accent' : 'bg-surface text-ink-secondary'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div className="pb-14">
-        {groups.map((group) => (
-          <section key={group.key} className="px-4">
-            {group.title ? (
-              <h2 className="px-1 pt-5 pb-2 text-[13px] font-medium text-ink-secondary">
-                {group.title}
-              </h2>
-            ) : (
-              <div className="pt-4" />
-            )}
-            <div className="divide-hairline overflow-hidden rounded-xl bg-surface">
-              {group.people.map((person) => {
-                const isPresent = present.has(person.id);
-                return (
-                  <button
-                    key={person.id}
-                    type="button"
-                    onClick={() => toggle(person.id)}
-                    aria-pressed={isPresent}
-                    className={`flex min-h-[3.25rem] w-full items-center gap-3 px-4 py-2 text-left text-[17px] ${
-                      isPresent
-                        ? 'bg-accent text-on-accent'
-                        : 'bg-surface text-ink active:bg-surface-pressed'
-                    }`}
-                  >
-                    <span className="min-w-0 flex-1 truncate">{person.name}</span>
-                    <span
-                      className={`shrink-0 text-[13px] ${
-                        isPresent ? 'text-on-accent/70' : 'text-ink-tertiary'
+        {shown.map((group) => {
+          const allHere =
+            group.people.length > 0 && group.people.every((person) => present.has(person.id));
+
+          return (
+            <section key={group.key} className="px-4">
+              {group.title ? (
+                <div className="flex items-center gap-2 px-1 pt-5 pb-2">
+                  <h2 className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink-secondary">
+                    {group.title}
+                  </h2>
+                  {group.markAll && group.people.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group)}
+                      className="shrink-0 text-[13px] text-accent"
+                    >
+                      {allHere ? 'Clear' : group.people.length > 2 ? 'Mark all' : 'Mark both'}
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="pt-4" />
+              )}
+
+              <div className="divide-hairline overflow-hidden rounded-xl bg-surface">
+                {group.people.map((person) => {
+                  const isPresent = present.has(person.id);
+                  return (
+                    <button
+                      key={person.id}
+                      type="button"
+                      onClick={() => setPresence(person.id, !isPresent)}
+                      aria-pressed={isPresent}
+                      className={`flex min-h-[3.25rem] w-full items-center gap-3 px-4 py-2 text-left text-[17px] ${
+                        isPresent
+                          ? 'bg-accent text-on-accent'
+                          : 'bg-surface text-ink active:bg-surface-pressed'
                       }`}
                     >
-                      {person.role === 'rabbi' ? 'R' : 'W'}
-                    </span>
-                    <span aria-hidden className="w-4 shrink-0 text-center text-[17px]">
-                      {isPresent ? '✓' : ''}
-                    </span>
-                  </button>
-                );
-              })}
-              {group.people.length === 0 ? (
-                <p className="px-4 py-3 text-[15px] text-ink-secondary">Nobody here.</p>
-              ) : null}
-            </div>
-          </section>
-        ))}
+                      <span className="min-w-0 flex-1 truncate">{person.name}</span>
+                      <span
+                        className={`shrink-0 text-[13px] ${
+                          isPresent ? 'text-on-accent/70' : 'text-ink-tertiary'
+                        }`}
+                      >
+                        {person.role === 'rabbi' ? 'R' : 'W'}
+                      </span>
+                      <span aria-hidden className="w-4 shrink-0 text-center text-[17px]">
+                        {isPresent ? '✓' : ''}
+                      </span>
+                    </button>
+                  );
+                })}
+                {group.people.length === 0 ? (
+                  <p className="px-4 py-3 text-[15px] text-ink-secondary">Nobody here.</p>
+                ) : null}
+              </div>
+            </section>
+          );
+        })}
       </div>
 
       <div className="fixed inset-x-0 bottom-[calc(3.25rem+env(safe-area-inset-bottom))] z-20 border-t border-hairline bg-canvas/95 backdrop-blur">

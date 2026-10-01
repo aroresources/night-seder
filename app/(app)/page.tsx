@@ -58,6 +58,7 @@ export default async function TonightPage(props: PageProps<'/'>) {
       key: pair.id,
       title: pair.label ?? members.map((m) => m.name).join(' & '),
       people: members,
+      markAll: true,
     });
   }
 
@@ -145,6 +146,13 @@ export default async function TonightPage(props: PageProps<'/'>) {
             table="night_attendance"
             date={date}
             groups={groups}
+            // Only worth offering the switch when there are pairs to switch away
+            // from; `eligible` is already in surname order.
+            flatGroup={
+              pairs.length > 0
+                ? { key: 'everyone', title: null, people: eligible }
+                : undefined
+            }
             initialPresent={attendance.map((row) => row.person_id)}
           />
         )}
