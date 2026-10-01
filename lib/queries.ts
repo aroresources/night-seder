@@ -9,6 +9,8 @@ import type {
   DafDayOff,
   Pair,
   PairMember,
+  Payment,
+  PaymentPeriod,
   Person,
   Settings,
   Zman,
@@ -167,6 +169,36 @@ export async function getAllAttendance(
     let query = supabase.from(table).select('*');
     if (range) query = query.gte('date', range.start).lte('date', range.end);
     return query.order('date').range(from, to);
+  });
+}
+
+// Payments ---------------------------------------------------------------
+
+export async function getPaymentPeriods(): Promise<PaymentPeriod[]> {
+  const supabase = await supabaseServer();
+  return unwrap(
+    await supabase.from('payment_periods').select('*').order('start_date', { ascending: false }),
+  );
+}
+
+export async function getPaymentPeriod(id: string): Promise<PaymentPeriod | null> {
+  const supabase = await supabaseServer();
+  const { data, error } = await supabase
+    .from('payment_periods')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** Every payment, or just one period's. Newest first. */
+export async function getPayments(periodId?: string): Promise<Payment[]> {
+  const supabase = await supabaseServer();
+  return page<Payment>((from, to) => {
+    let query = supabase.from('payments').select('*');
+    if (periodId) query = query.eq('period_id', periodId);
+    return query.order('date_paid', { ascending: false }).range(from, to);
   });
 }
 

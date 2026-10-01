@@ -14,6 +14,7 @@ import {
   type PersonWindow,
 } from '@/lib/attendance';
 import { formatCompactDate, formatShortDate, minDate, today } from '@/lib/dates';
+import { formatCents } from '@/lib/money';
 import {
   getAllAttendance,
   getCorrespondence,
@@ -110,6 +111,16 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
               {dafStats.attended}/{dafStats.expected} · {dafStats.percent}%
             </span>
           </Row>
+          {person.gets_paid ? (
+            <Row>
+              <span className="flex-1 text-[15px]">Gets paid</span>
+              <Link href="/more/payments" className="text-[15px] text-accent">
+                {person.monthly_amount_cents != null
+                  ? `${formatCents(person.monthly_amount_cents)} a month`
+                  : 'No usual amount'}
+              </Link>
+            </Row>
+          ) : null}
           <Row>
             <span className="flex-1 text-[15px]">Member since</span>
             <span className="text-[15px] text-ink-secondary">

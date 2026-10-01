@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { today } from '@/lib/dates';
+import { parseDollars } from '@/lib/money';
 import { supabaseServer } from '@/lib/supabase/server';
 import type { Role } from '@/lib/types';
 
@@ -16,6 +17,11 @@ function refreshEverything() {
 
 function role(form: FormData): Role {
   return text(form, 'role') === 'rabbi' ? 'rabbi' : 'working';
+}
+
+/** An empty box means "no usual amount", not zero. */
+function monthlyAmount(form: FormData): number | null {
+  return parseDollars(text(form, 'monthly_amount'));
 }
 
 export async function createPerson(form: FormData) {
@@ -33,6 +39,8 @@ export async function createPerson(form: FormData) {
       in_night_seder: checkbox(form, 'in_night_seder'),
       in_daf: checkbox(form, 'in_daf'),
       start_date: optionalDate(form, 'start_date') ?? today(),
+      gets_paid: checkbox(form, 'gets_paid'),
+      monthly_amount_cents: monthlyAmount(form),
     })
     .select('id')
     .single();
@@ -83,6 +91,8 @@ export async function updatePerson(id: string, form: FormData) {
       in_night_seder: checkbox(form, 'in_night_seder'),
       in_daf: checkbox(form, 'in_daf'),
       start_date: optionalDate(form, 'start_date') ?? today(),
+      gets_paid: checkbox(form, 'gets_paid'),
+      monthly_amount_cents: monthlyAmount(form),
     })
     .eq('id', id);
   if (error) throw new Error(error.message);

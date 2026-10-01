@@ -1,4 +1,5 @@
 import { today } from '@/lib/dates';
+import { centsToInput } from '@/lib/money';
 import type { Person } from '@/lib/types';
 
 import { Button, inputClasses } from './ui';
@@ -75,6 +76,36 @@ export function PersonForm({
               className="h-5 w-5 accent-[var(--accent)]"
             />
             <span className="text-[17px]">In Daf</span>
+          </label>
+
+          <label className="flex min-h-[2.75rem] items-center gap-3 px-4 py-2.5">
+            <input
+              type="checkbox"
+              name="gets_paid"
+              defaultChecked={person ? person.gets_paid : false}
+              className="h-5 w-5 accent-[var(--accent)]"
+            />
+            <span className="text-[17px]">Gets paid</span>
+          </label>
+
+          <label className="block px-4 py-2.5">
+            <span className="mb-1 block text-[13px] text-ink-secondary">
+              Usual monthly amount (optional)
+            </span>
+            <input
+              name="monthly_amount"
+              inputMode="decimal"
+              placeholder="180"
+              defaultValue={
+                person?.monthly_amount_cents != null
+                  ? centsToInput(person.monthly_amount_cents)
+                  : ''
+              }
+              className={inputClasses}
+            />
+            <span className="mt-1 block text-[13px] text-ink-tertiary">
+              Prefills each month on the Payments page. A payment can still be more or less.
+            </span>
           </label>
 
           <label className="block px-4 py-2.5">

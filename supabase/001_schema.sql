@@ -27,7 +27,11 @@ create table if not exists people (
   start_date       date not null default current_date,
   end_date         date,
   track_contact    boolean not null default true,
-  snoozed_until    date
+  snoozed_until    date,
+  -- Some of the men are paid. `monthly_amount_cents` is what he usually gets
+  -- for a month; an individual payment can be more or less.
+  gets_paid            boolean not null default false,
+  monthly_amount_cents int
 );
 
 create index if not exists people_active_idx on people (active);
@@ -124,6 +128,37 @@ create table if not exists correspondence (
 
 create index if not exists correspondence_person_date_idx on correspondence (person_id, date desc);
 
+-- Payments -------------------------------------------------------------
+-- Periods are added by hand and are usually a Jewish month. `start_date` is
+-- any civil date inside that month: it orders the list and suggests the name.
+-- Money is a whole number of cents, never a float.
+
+create table if not exists payment_periods (
+  id         uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  name       text not null,
+  start_date date not null,
+  note       text
+);
+
+create index if not exists payment_periods_start_idx on payment_periods (start_date desc);
+
+create table if not exists payments (
+  id           uuid primary key default gen_random_uuid(),
+  created_at   timestamptz not null default now(),
+  period_id    uuid not null references payment_periods on delete cascade,
+  person_id    uuid not null references people on delete cascade,
+  amount_cents int not null check (amount_cents >= 0),
+  date_paid    date not null default current_date,
+  method       text not null check (method in ('cash', 'check', 'transfer', 'other')),
+  note         text
+);
+
+-- Deliberately not unique on (period_id, person_id): a month can be settled
+-- in two instalments, or topped up later.
+create index if not exists payments_period_idx on payments (period_id);
+create index if not exists payments_person_idx on payments (person_id, date_paid desc);
+
 -- Settings -------------------------------------------------------------
 -- Exactly one row, id = 1.
 
@@ -149,6 +184,8 @@ alter table night_attendance enable row level security;
 alter table daf_days_off     enable row level security;
 alter table daf_attendance   enable row level security;
 alter table correspondence   enable row level security;
+alter table payment_periods  enable row level security;
+alter table payments         enable row level security;
 alter table settings         enable row level security;
 
 create policy "authenticated full access" on people           for all to authenticated using (true) with check (true);
@@ -160,4 +197,6 @@ create policy "authenticated full access" on night_attendance for all to authent
 create policy "authenticated full access" on daf_days_off     for all to authenticated using (true) with check (true);
 create policy "authenticated full access" on daf_attendance   for all to authenticated using (true) with check (true);
 create policy "authenticated full access" on correspondence   for all to authenticated using (true) with check (true);
+create policy "authenticated full access" on payment_periods  for all to authenticated using (true) with check (true);
+create policy "authenticated full access" on payments         for all to authenticated using (true) with check (true);
 create policy "authenticated full access" on settings         for all to authenticated using (true) with check (true);

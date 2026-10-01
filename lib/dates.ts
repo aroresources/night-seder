@@ -170,6 +170,18 @@ export function hebrewDateForNight(date: CalendarDate): string {
   return hebrewDate(addDays(date, 1));
 }
 
+/**
+ * The Hebrew month a civil date falls in, e.g. "Tishri 5787" or "Adar II 5787".
+ * Used to name a payment period, since the men are paid by the Jewish month.
+ */
+export function hebrewMonthYear(date: CalendarDate): string {
+  return new Intl.DateTimeFormat('en-u-ca-hebrew', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(toUtcMidnight(date));
+}
+
 /** "3 days ago", "in 2 days", "today" — for last-contact and follow-up lines. */
 export function relativeDays(date: CalendarDate, from: CalendarDate): string {
   const diff = daysBetween(from, date);

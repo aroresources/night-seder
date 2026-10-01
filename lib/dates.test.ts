@@ -8,6 +8,7 @@ import {
   formatHeaderDate,
   hebrewDate,
   hebrewDateForNight,
+  hebrewMonthYear,
   isCalendarDate,
   relativeDays,
   today,
@@ -110,6 +111,12 @@ test('the Hebrew date for a night is the next civil day', () => {
   const evening = '2026-09-17';
   assert.equal(hebrewDateForNight(evening), hebrewDate(addDays(evening, 1)));
   assert.notEqual(hebrewDateForNight(evening), hebrewDate(evening));
+});
+
+test('hebrewMonthYear names the month a payment period covers', () => {
+  assert.equal(hebrewMonthYear('2026-09-30'), 'Tishri 5787');
+  assert.equal(hebrewMonthYear('2026-10-15'), 'Heshvan 5787');
+  assert.equal(hebrewMonthYear('2027-04-02'), 'Adar II 5787', 'a leap year has two Adars');
 });
 
 test('hebrewDate produces a Hebrew calendar year, not a civil one', () => {

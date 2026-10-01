@@ -13,6 +13,7 @@ export default async function MorePage() {
         <Group>
           <LinkRow href="/more/people">People</LinkRow>
           <LinkRow href="/more/zmanim">Zmanim</LinkRow>
+          <LinkRow href="/more/payments">Payments</LinkRow>
           <LinkRow href="/more/daf-days-off">Daf days off</LinkRow>
           <LinkRow href="/more/settings">Settings</LinkRow>
         </Group>

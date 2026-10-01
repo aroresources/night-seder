@@ -7,7 +7,13 @@ phone, meant to be used standing in the room with one thumb.
 - **Daf** — the same thing as a flat list for the morning shiur.
 - **Contact** — who to call: missed streaks, follow-ups, and a log of what you said.
 - **Reports** — attendance per person and per pair, plus the nights nobody recorded.
-- **More** — people, zmanim, Daf days off, settings, sign out.
+- **More** — people, zmanim, payments, Daf days off, settings, sign out.
+
+Some of the men are paid. Tick **Gets paid** on a person and give him a usual
+monthly amount; then under **More → Payments** add a period (usually a Jewish
+month — the name fills itself in from the date) and record what each man
+actually got. A payment can be more or less than the usual amount, and a month
+can be settled in more than one go.
 
 Next.js (App Router) and TypeScript, Tailwind for styling, Supabase for the
 database and sign-in, deployed on Vercel.
@@ -145,5 +151,7 @@ The rules that are easy to get wrong live in `lib/` and are unit-tested:
 - `lib/attendance.ts` — derived schedules, which sessions count as held, what
   each person was expected at, and missed streaks.
 - `lib/contact.ts` — who lands in "Needs attention" and why.
+- `lib/money.ts` — amounts as whole cents. Money is never a float, so a ledger
+  can't drift a cent at a time.
 
 Run `npm test` after touching any of them.

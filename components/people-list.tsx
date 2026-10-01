@@ -5,13 +5,14 @@ import { useMemo, useState } from 'react';
 
 import type { Person } from '@/lib/types';
 
-type Filter = 'all' | 'rabbi' | 'working' | 'daf' | 'inactive';
+type Filter = 'all' | 'rabbi' | 'working' | 'daf' | 'paid' | 'inactive';
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'rabbi', label: 'Rabbis' },
   { value: 'working', label: 'Working' },
   { value: 'daf', label: 'Daf' },
+  { value: 'paid', label: 'Paid' },
   { value: 'inactive', label: 'Inactive' },
 ];
 
@@ -30,6 +31,8 @@ export function PeopleList({ people }: { people: Person[] }) {
           return person.role === 'working' && person.active;
         case 'daf':
           return person.in_daf && person.active;
+        case 'paid':
+          return person.gets_paid;
         case 'inactive':
           return !person.active;
         default:
@@ -87,6 +90,11 @@ export function PeopleList({ people }: { people: Person[] }) {
                 </span>
                 {person.in_daf ? (
                   <span className="shrink-0 text-[13px] text-ink-tertiary">Daf</span>
+                ) : null}
+                {person.gets_paid ? (
+                  <span className="shrink-0 text-[13px] text-ink-tertiary" title="Gets paid">
+                    $
+                  </span>
                 ) : null}
                 {!person.active ? (
                   <span className="shrink-0 text-[13px] text-ink-tertiary">inactive</span>
