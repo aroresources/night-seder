@@ -108,6 +108,23 @@ export type Correspondence = {
   follow_up_date: CalendarDate | null;
 };
 
+/**
+ * A label for the men learning a particular topic. Only a tag and a filter:
+ * groups never affect pairs, schedules or who is expected at a session.
+ */
+export type Group = {
+  id: string;
+  created_at: string;
+  name: string;
+};
+
+export type PersonGroup = {
+  id: string;
+  created_at: string;
+  person_id: string;
+  group_id: string;
+};
+
 export type PaymentMethod = 'cash' | 'check' | 'transfer' | 'other';
 
 export const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
@@ -176,6 +193,8 @@ export type Database = {
       daf_attendance: TableDef<Attendance, 'date' | 'person_id'>;
       daf_days_off: TableDef<DafDayOff, 'date'>;
       correspondence: TableDef<Correspondence, 'person_id' | 'channel'>;
+      groups: TableDef<Group, 'name'>;
+      person_groups: TableDef<PersonGroup, 'person_id' | 'group_id'>;
       payment_periods: TableDef<PaymentPeriod, 'name' | 'start_date'>;
       payments: TableDef<Payment, 'period_id' | 'person_id' | 'amount_cents' | 'method'>;
       settings: TableDef<Settings, 'id'>;

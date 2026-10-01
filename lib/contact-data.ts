@@ -4,13 +4,21 @@ import type { ContactRow } from '@/components/contact-list';
 import { streaksForAll, type PersonWindow, type StreakSummary } from '@/lib/attendance';
 import { byLeastRecentlyContacted, contactReasons, groupFor } from '@/lib/contact';
 import { today } from '@/lib/dates';
-import { getAllAttendance, getCorrespondence, getPeople, getSettings } from '@/lib/queries';
-import type { Correspondence, Person, Settings } from '@/lib/types';
+import {
+  getAllAttendance,
+  getCorrespondence,
+  getGroupMembership,
+  getGroups,
+  getPeople,
+  getSettings,
+} from '@/lib/queries';
+import type { Correspondence, Group, Person, Settings } from '@/lib/types';
 
 const NO_STREAK: StreakSummary = { streak: 0, lastAttended: null };
 
 export interface ContactData {
   rows: ContactRow[];
+  groups: Group[];
   settings: Settings;
   /** Person id -> their correspondence, newest first. */
   entriesByPerson: Map<string, Correspondence[]>;
@@ -23,13 +31,16 @@ export interface ContactData {
  * computed for everyone in one pass, never one query per person.
  */
 export async function loadContactData(): Promise<ContactData> {
-  const [people, settings, nightAttendance, dafAttendance, correspondence] = await Promise.all([
-    getPeople(),
-    getSettings(),
-    getAllAttendance('night_attendance'),
-    getAllAttendance('daf_attendance'),
-    getCorrespondence(),
-  ]);
+  const [people, settings, nightAttendance, dafAttendance, correspondence, groups, membership] =
+    await Promise.all([
+      getPeople(),
+      getSettings(),
+      getAllAttendance('night_attendance'),
+      getAllAttendance('daf_attendance'),
+      getCorrespondence(),
+      getGroups(),
+      getGroupMembership(),
+    ]);
 
   const windows: PersonWindow[] = people.map((person) => ({
     id: person.id,
@@ -74,6 +85,7 @@ export async function loadContactData(): Promise<ContactData> {
         : null,
       reasons,
       group: groupFor(person, reasons, now),
+      groupIds: membership.get(person.id) ?? [],
     };
   });
 
@@ -100,5 +112,5 @@ export async function loadContactData(): Promise<ContactData> {
     );
   });
 
-  return { rows, settings, entriesByPerson, people };
+  return { rows, groups, settings, entriesByPerson, people };
 }

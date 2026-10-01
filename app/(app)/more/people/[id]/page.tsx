@@ -19,6 +19,8 @@ import {
   getAllAttendance,
   getCorrespondence,
   getCurrentZman,
+  getGroupMembership,
+  getGroups,
   getPerson,
   getSettings,
 } from '@/lib/queries';
@@ -27,15 +29,21 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
   const { id } = await props.params;
   const now = today();
 
-  const [person, settings, zman, nightAttendance, dafAttendance, entries] = await Promise.all([
-    getPerson(id),
-    getSettings(),
-    getCurrentZman(),
-    getAllAttendance('night_attendance'),
-    getAllAttendance('daf_attendance'),
-    getCorrespondence(id),
-  ]);
+  const [person, settings, zman, nightAttendance, dafAttendance, entries, groups, membership] =
+    await Promise.all([
+      getPerson(id),
+      getSettings(),
+      getCurrentZman(),
+      getAllAttendance('night_attendance'),
+      getAllAttendance('daf_attendance'),
+      getCorrespondence(id),
+      getGroups(),
+      getGroupMembership(),
+    ]);
   if (!person) notFound();
+
+  const memberOf = new Set(membership.get(id) ?? []);
+  const myGroups = groups.filter((group) => memberOf.has(group.id));
 
   const window: PersonWindow = {
     id: person.id,
@@ -119,6 +127,14 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
                   ? `${formatCents(person.monthly_amount_cents)} a month`
                   : 'No usual amount'}
               </Link>
+            </Row>
+          ) : null}
+          {myGroups.length > 0 ? (
+            <Row>
+              <span className="flex-1 text-[15px]">Groups</span>
+              <span className="text-[15px] text-ink-secondary">
+                {myGroups.map((group) => group.name).join(', ')}
+              </span>
             </Row>
           ) : null}
           <Row>

@@ -8,6 +8,7 @@ import type {
   Attendance,
   Correspondence,
   DafDayOff,
+  Group,
   Pair,
   PairMember,
   Payment,
@@ -175,6 +176,27 @@ export async function getAllAttendance(
     if (range) query = query.gte('date', range.start).lte('date', range.end);
     return query.order('date').range(from, to);
   });
+}
+
+// Groups -----------------------------------------------------------------
+
+export async function getGroups(): Promise<Group[]> {
+  const supabase = await supabaseServer();
+  return unwrap(await supabase.from('groups').select('*').order('name'));
+}
+
+/** Every membership, in one query. Person id -> the groups he is in. */
+export async function getGroupMembership(): Promise<Map<string, string[]>> {
+  const supabase = await supabaseServer();
+  const rows = unwrap(await supabase.from('person_groups').select('*'));
+
+  const byPerson = new Map<string, string[]>();
+  for (const row of rows) {
+    const existing = byPerson.get(row.person_id);
+    if (existing) existing.push(row.group_id);
+    else byPerson.set(row.person_id, [row.group_id]);
+  }
+  return byPerson;
 }
 
 // Payments ---------------------------------------------------------------

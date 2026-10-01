@@ -8,7 +8,7 @@ import { snoozeForDays } from '@/app/actions/contact';
 import { setTrackContact } from '@/app/actions/people';
 import type { Reason } from '@/lib/contact';
 import { formatShortDate } from '@/lib/dates';
-import { channelLabel, type Channel, type Role } from '@/lib/types';
+import { channelLabel, type Channel, type Group, type Role } from '@/lib/types';
 
 import { ContactForm } from './contact-form';
 import { Chip } from './ui';
@@ -26,6 +26,8 @@ export interface ContactRow {
   lastContact: { date: string; channel: Channel; note: string | null } | null;
   reasons: Reason[];
   group: 'needs_attention' | 'everyone_else' | 'snoozed';
+  /** The ids of the topic groups he is tagged with. */
+  groupIds: string[];
 }
 
 type Filter = 'all' | 'rabbi' | 'working' | 'hidden';
@@ -37,8 +39,9 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'hidden', label: 'Hidden' },
 ];
 
-export function ContactList({ rows }: { rows: ContactRow[] }) {
+export function ContactList({ rows, groups }: { rows: ContactRow[]; groups: Group[] }) {
   const [filter, setFilter] = useState<Filter>('all');
+  const [topic, setTopic] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [showSnoozed, setShowSnoozed] = useState(false);
 
@@ -48,10 +51,11 @@ export function ContactList({ rows }: { rows: ContactRow[] }) {
       if (filter === 'hidden' ? row.trackContact : !row.trackContact) return false;
       if (filter === 'rabbi' && row.role !== 'rabbi') return false;
       if (filter === 'working' && row.role !== 'working') return false;
+      if (topic && !row.groupIds.includes(topic)) return false;
       if (needle && !row.name.toLowerCase().includes(needle)) return false;
       return true;
     });
-  }, [rows, filter, search]);
+  }, [rows, filter, topic, search]);
 
   const needsAttention = visible.filter((row) => row.group === 'needs_attention');
   const everyoneElse = visible.filter((row) => row.group === 'everyone_else');
@@ -77,6 +81,26 @@ export function ContactList({ rows }: { rows: ContactRow[] }) {
             </button>
           ))}
         </div>
+        {groups.length > 0 ? (
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {groups.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setTopic(topic === option.id ? null : option.id)}
+                aria-pressed={topic === option.id}
+                className={`min-h-[2.25rem] shrink-0 rounded-full px-3 text-[15px] ${
+                  topic === option.id
+                    ? 'bg-accent text-on-accent'
+                    : 'bg-surface text-ink-secondary'
+                }`}
+              >
+                {option.name}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         <input
           type="search"
           value={search}

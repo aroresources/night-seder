@@ -3,7 +3,7 @@ import { ScreenHeader } from '@/components/ui';
 import { loadContactData } from '@/lib/contact-data';
 
 export default async function ContactPage() {
-  const { rows } = await loadContactData();
+  const { rows, groups } = await loadContactData();
   const needsAttention = rows.filter(
     (row) => row.trackContact && row.group === 'needs_attention',
   ).length;
@@ -19,7 +19,7 @@ export default async function ContactPage() {
         }
       />
       <div className="mx-auto w-full max-w-[480px] pb-tabbar">
-        <ContactList rows={rows} />
+        <ContactList rows={rows} groups={groups} />
       </div>
     </>
   );

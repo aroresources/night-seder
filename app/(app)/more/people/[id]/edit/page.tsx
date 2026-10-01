@@ -4,11 +4,15 @@ import { notFound } from 'next/navigation';
 import { updatePerson } from '@/app/actions/people';
 import { PersonForm } from '@/components/person-form';
 import { ScreenHeader } from '@/components/ui';
-import { getPerson } from '@/lib/queries';
+import { getGroupMembership, getGroups, getPerson } from '@/lib/queries';
 
 export default async function EditPersonPage(props: PageProps<'/more/people/[id]/edit'>) {
   const { id } = await props.params;
-  const person = await getPerson(id);
+  const [person, groups, membership] = await Promise.all([
+    getPerson(id),
+    getGroups(),
+    getGroupMembership(),
+  ]);
   if (!person) notFound();
 
   return (
@@ -21,7 +25,13 @@ export default async function EditPersonPage(props: PageProps<'/more/people/[id]
           </Link>
         }
       />
-      <PersonForm action={updatePerson.bind(null, id)} person={person} submitLabel="Save changes" />
+      <PersonForm
+        action={updatePerson.bind(null, id)}
+        person={person}
+        groups={groups}
+        memberOf={membership.get(id) ?? []}
+        submitLabel="Save changes"
+      />
     </>
   );
 }

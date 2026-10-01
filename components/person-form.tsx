@@ -1,6 +1,6 @@
 import { today } from '@/lib/dates';
 import { centsToInput } from '@/lib/money';
-import type { Person } from '@/lib/types';
+import type { Group, Person } from '@/lib/types';
 
 import { Button, inputClasses } from './ui';
 
@@ -8,10 +8,16 @@ import { Button, inputClasses } from './ui';
 export function PersonForm({
   action,
   person,
+  groups,
+  memberOf = [],
   submitLabel,
 }: {
   action: (form: FormData) => Promise<void>;
   person?: Person;
+  /** Every group that exists, to tick. */
+  groups: Group[];
+  /** The ids this person is already in. */
+  memberOf?: string[];
   submitLabel: string;
 }) {
   return (
@@ -155,6 +161,33 @@ export function PersonForm({
               He is only expected at sessions from this date on.
             </span>
           </label>
+        </div>
+      </section>
+
+      <section className="px-4">
+        <h2 className="px-1 pt-5 pb-2 text-[13px] font-medium text-ink-secondary">Groups</h2>
+        <div className="divide-hairline overflow-hidden rounded-xl bg-surface">
+          {groups.length === 0 ? (
+            <p className="px-4 py-3 text-[15px] text-ink-secondary">
+              No groups yet. Make one under More, then tag the men who learn that topic.
+            </p>
+          ) : (
+            groups.map((group) => (
+              <label
+                key={group.id}
+                className="flex min-h-[2.75rem] items-center gap-3 px-4 py-2.5"
+              >
+                <input
+                  type="checkbox"
+                  name="group_ids"
+                  value={group.id}
+                  defaultChecked={memberOf.includes(group.id)}
+                  className="h-5 w-5 accent-[var(--accent)]"
+                />
+                <span className="text-[17px]">{group.name}</span>
+              </label>
+            ))
+          )}
         </div>
       </section>
 

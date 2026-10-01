@@ -3,8 +3,11 @@ import Link from 'next/link';
 import { createPerson } from '@/app/actions/people';
 import { PersonForm } from '@/components/person-form';
 import { ScreenHeader } from '@/components/ui';
+import { getGroups } from '@/lib/queries';
 
-export default function NewPersonPage() {
+export default async function NewPersonPage() {
+  const groups = await getGroups();
+
   return (
     <>
       <ScreenHeader
@@ -15,7 +18,7 @@ export default function NewPersonPage() {
           </Link>
         }
       />
-      <PersonForm action={createPerson} submitLabel="Add person" />
+      <PersonForm action={createPerson} groups={groups} submitLabel="Add person" />
     </>
   );
 }

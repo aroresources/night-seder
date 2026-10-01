@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
-import type { Person } from '@/lib/types';
+import type { Group, Person } from '@/lib/types';
 
 type Filter = 'all' | 'rabbi' | 'working' | 'daf' | 'paid' | 'inactive';
 
@@ -16,14 +16,25 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'inactive', label: 'Inactive' },
 ];
 
-export function PeopleList({ people }: { people: Person[] }) {
+export function PeopleList({
+  people,
+  groups,
+  groupsByPerson,
+}: {
+  people: Person[];
+  groups: Group[];
+  /** Person id -> the group ids he is in. */
+  groupsByPerson: Record<string, string[]>;
+}) {
   const [filter, setFilter] = useState<Filter>('all');
+  const [group, setGroup] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return people.filter((person) => {
       if (needle && !person.name.toLowerCase().includes(needle)) return false;
+      if (group && !(groupsByPerson[person.id] ?? []).includes(group)) return false;
       switch (filter) {
         case 'rabbi':
           return person.role === 'rabbi' && person.active;
@@ -39,7 +50,7 @@ export function PeopleList({ people }: { people: Person[] }) {
           return true;
       }
     });
-  }, [people, filter, search]);
+  }, [people, filter, group, groupsByPerson, search]);
 
   return (
     <div>
@@ -61,6 +72,26 @@ export function PeopleList({ people }: { people: Person[] }) {
             </button>
           ))}
         </div>
+        {groups.length > 0 ? (
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {groups.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setGroup(group === option.id ? null : option.id)}
+                aria-pressed={group === option.id}
+                className={`min-h-[2.25rem] shrink-0 rounded-full px-3 text-[15px] ${
+                  group === option.id
+                    ? 'bg-accent text-on-accent'
+                    : 'bg-surface text-ink-secondary'
+                }`}
+              >
+                {option.name}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         <input
           type="search"
           value={search}

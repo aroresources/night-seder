@@ -10,6 +10,7 @@ import { supabaseServer } from '@/lib/supabase/server';
 import type { Role } from '@/lib/types';
 
 import { checkbox, optionalDate, optionalText, text } from './form';
+import { setPersonGroups } from './groups';
 
 function refreshEverything() {
   // A person shows up on every screen, so nothing here is worth narrowing.
@@ -23,6 +24,11 @@ function role(form: FormData): Role {
 /** An empty box means "no usual amount", not zero. */
 function monthlyAmount(form: FormData): number | null {
   return parseDollars(text(form, 'monthly_amount'));
+}
+
+/** The ticked group checkboxes. An empty list means "in no groups". */
+function groupIds(form: FormData): string[] {
+  return form.getAll('group_ids').map(String).filter(Boolean);
 }
 
 /**
@@ -59,6 +65,8 @@ export async function createPerson(form: FormData) {
     .select('id')
     .single();
   if (error) throw new Error(error.message);
+
+  await setPersonGroups(data.id, groupIds(form));
 
   refreshEverything();
   redirect(`/more/people/${data.id}`);
@@ -112,6 +120,8 @@ export async function updatePerson(id: string, form: FormData) {
     })
     .eq('id', id);
   if (error) throw new Error(error.message);
+
+  await setPersonGroups(id, groupIds(form));
 
   refreshEverything();
   redirect(`/more/people/${id}`);

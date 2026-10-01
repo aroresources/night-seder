@@ -2,10 +2,15 @@ import Link from 'next/link';
 
 import { PeopleList } from '@/components/people-list';
 import { Empty, ButtonLink, ScreenHeader } from '@/components/ui';
-import { getPeople } from '@/lib/queries';
+import { getGroupMembership, getGroups, getPeople } from '@/lib/queries';
 
 export default async function PeoplePage() {
-  const people = await getPeople();
+  const [people, groups, membership] = await Promise.all([
+    getPeople(),
+    getGroups(),
+    getGroupMembership(),
+  ]);
+  const groupsByPerson = Object.fromEntries(membership);
 
   return (
     <>
@@ -31,7 +36,7 @@ export default async function PeoplePage() {
             No people yet. Add the men who learn, or paste a whole list at once.
           </Empty>
         ) : (
-          <PeopleList people={people} />
+          <PeopleList people={people} groups={groups} groupsByPerson={groupsByPerson} />
         )}
 
         <div className="px-4 pt-5">

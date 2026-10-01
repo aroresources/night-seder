@@ -12,6 +12,7 @@ export default async function MorePage() {
       <div className="mx-auto w-full max-w-[480px] pb-tabbar">
         <Group>
           <LinkRow href="/more/people">People</LinkRow>
+          <LinkRow href="/more/groups">Groups</LinkRow>
           <LinkRow href="/more/zmanim">Zmanim</LinkRow>
           <LinkRow href="/more/payments">Payments</LinkRow>
           <LinkRow href="/more/daf-days-off">Daf days off</LinkRow>
