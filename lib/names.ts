@@ -46,3 +46,17 @@ export function fullName(parts: NameParts): string {
     .filter(Boolean)
     .join(' ');
 }
+
+/**
+ * Lists are ordered by surname, which is how you'd read a list of men out.
+ * Someone with no surname sorts under his first name rather than being
+ * swept to the bottom, and the first name breaks ties between brothers.
+ */
+export function nameSortKey(parts: NameParts): string {
+  const surname = parts.last_name?.trim() || parts.first_name.trim();
+  return `${surname} ${parts.first_name.trim()}`.toLowerCase();
+}
+
+export function compareByName(a: NameParts, b: NameParts): number {
+  return nameSortKey(a).localeCompare(nameSortKey(b));
+}

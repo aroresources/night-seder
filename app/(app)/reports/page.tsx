@@ -23,6 +23,7 @@ import {
   today,
   type CalendarDate,
 } from '@/lib/dates';
+import { nameSortKey } from '@/lib/names';
 import {
   getAllAttendance,
   getCurrentZman,
@@ -62,6 +63,7 @@ function buildRows(
       return {
         id: person.id,
         name: person.name,
+        sortKey: nameSortKey(person),
         role: person.role,
         pair: pairOf(person.id),
         attended: stats.attended,

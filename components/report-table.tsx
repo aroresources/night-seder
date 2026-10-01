@@ -7,6 +7,8 @@ import { Chip } from './ui';
 export interface ReportRow {
   id: string;
   name: string;
+  /** Surname first, lowercased — what "sort by name" actually means here. */
+  sortKey: string;
   role: 'rabbi' | 'working';
   pair: string | null;
   attended: number;
@@ -40,7 +42,9 @@ export function ReportTable({
   const visible = useMemo(() => {
     const filtered = rows.filter((row) => filter === 'all' || row.role === filter);
     return [...filtered].sort((a, b) =>
-      sort === 'name' ? a.name.localeCompare(b.name) : b.percent - a.percent || a.name.localeCompare(b.name),
+      sort === 'name'
+        ? a.sortKey.localeCompare(b.sortKey)
+        : b.percent - a.percent || a.sortKey.localeCompare(b.sortKey),
     );
   }, [rows, sort, filter]);
 

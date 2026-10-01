@@ -1,7 +1,54 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { fullName, parseFullName } from './names.ts';
+import { compareByName, fullName, nameSortKey, parseFullName } from './names.ts';
+
+const person = (first: string, last: string | null = null, middle: string | null = null) => ({
+  first_name: first,
+  middle_name: middle,
+  last_name: last,
+});
+
+test('lists order by surname, not by first name', () => {
+  const people = [
+    person('Edon', 'Freiner'),
+    person('Moshe', 'Goldzweig'),
+    person('Avi', 'Zussman'),
+    person('Yaakov', 'Berger'),
+  ];
+  assert.deepEqual(
+    [...people].sort(compareByName).map(fullName),
+    ['Yaakov Berger', 'Edon Freiner', 'Moshe Goldzweig', 'Avi Zussman'],
+  );
+});
+
+test('brothers are separated by their first names', () => {
+  const people = [person('Yosef', 'Cohen'), person('Dovid', 'Cohen'), person('Avi', 'Cohen')];
+  assert.deepEqual(
+    [...people].sort(compareByName).map((p) => p.first_name),
+    ['Avi', 'Dovid', 'Yosef'],
+  );
+});
+
+test('a man with no surname sorts under his first name, not at the bottom', () => {
+  const people = [person('Zalman', 'Adler'), person('Mendel'), person('Shimon', 'Zilber')];
+  assert.deepEqual(
+    [...people].sort(compareByName).map(fullName),
+    ['Zalman Adler', 'Mendel', 'Shimon Zilber'],
+  );
+});
+
+test('sorting ignores case and stray spacing', () => {
+  assert.equal(nameSortKey(person('edon', 'freiner')), nameSortKey(person('Edon', ' Freiner ')));
+  assert.equal(nameSortKey(person('Mendel', '  ')), nameSortKey(person('Mendel', null)));
+});
+
+test('the middle name has no say in the order', () => {
+  assert.equal(
+    nameSortKey(person('Dovid', 'Cohen', 'Aryeh')),
+    nameSortKey(person('Dovid', 'Cohen')),
+  );
+});
 
 test('one word is a first name and nothing else', () => {
   assert.deepEqual(parseFullName('Dovid'), {

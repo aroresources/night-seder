@@ -23,12 +23,11 @@ export default async function DafPage(props: PageProps<'/daf'>) {
     getAttendanceOn('daf_attendance', date),
   ]);
 
-  const eligible = people
-    .filter(
-      (person) =>
-        person.active && person.in_daf && withinWindow(date, person.start_date, person.end_date),
-    )
-    .sort((a, b) => a.name.localeCompare(b.name));
+  // getPeople already returns everyone in surname order.
+  const eligible = people.filter(
+    (person) =>
+      person.active && person.in_daf && withinWindow(date, person.start_date, person.end_date),
+  );
 
   const status = dafScheduleStatus(daysOff, date);
   const alreadyADayOff = daysOff.some((day) => day.date === date);

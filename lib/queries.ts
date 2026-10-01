@@ -2,6 +2,7 @@ import 'server-only';
 
 import { today } from '@/lib/dates';
 import type { CalendarDate } from '@/lib/dates';
+import { compareByName } from '@/lib/names';
 import { supabaseServer } from '@/lib/supabase/server';
 import type {
   Attendance,
@@ -57,9 +58,13 @@ export async function getSettings(): Promise<Settings> {
   return unwrap(await supabase.from('settings').select('*').eq('id', 1).single());
 }
 
+/** Everyone, ordered by surname — the order every list in the app shows. */
 export async function getPeople(): Promise<Person[]> {
   const supabase = await supabaseServer();
-  return unwrap(await supabase.from('people').select('*').order('name'));
+  const people = unwrap(await supabase.from('people').select('*'));
+  // Sorted here rather than in SQL: "no surname sorts under the first name"
+  // is a rule worth having in one tested place, not spread across queries.
+  return people.sort(compareByName);
 }
 
 export async function getPerson(id: string): Promise<Person | null> {

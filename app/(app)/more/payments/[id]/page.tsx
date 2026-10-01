@@ -35,8 +35,7 @@ export default async function PaymentPeriodPage(props: PageProps<'/more/payments
         paidCents: theirs.reduce((sum, payment) => sum + payment.amount_cents, 0),
         payments: theirs,
       };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
+    });
 
   const totalPaid = rows.reduce((sum, row) => sum + row.paidCents, 0);
   const totalExpected = rows.reduce((sum, row) => sum + (row.expectedCents ?? 0), 0);
