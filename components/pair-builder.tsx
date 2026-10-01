@@ -13,11 +13,17 @@ export interface PickablePerson {
   id: string;
   name: string;
   role: Role;
+  /** Already in another pair this zman. Still pickable — see below. */
+  paired: boolean;
 }
 
 /**
  * Make a pair by picking two or more people. The label defaults to their
  * names joined with "&", which is what you'd have written anyway.
+ *
+ * Everyone active is offered, including men already in a pair: a rabbi often
+ * sits with two chavrusas, and attendance is per person anyway, so marking him
+ * in one card marks him in both and he is still counted once.
  */
 export function PairBuilder({
   zmanId,
@@ -80,7 +86,7 @@ export function PairBuilder({
       <div className="mb-3 max-h-64 divide-y divide-hairline overflow-y-auto rounded-lg border border-hairline">
         {people.length === 0 ? (
           <p className="px-3 py-2.5 text-[15px] text-ink-secondary">
-            Everyone active is already paired.
+            Nobody active is in night seder yet.
           </p>
         ) : (
           people.map((person) => (
@@ -92,6 +98,9 @@ export function PairBuilder({
                 className="h-5 w-5 accent-[var(--accent)]"
               />
               <span className="flex-1 text-[17px]">{person.name}</span>
+              {person.paired ? (
+                <span className="text-[13px] text-ink-tertiary">already paired</span>
+              ) : null}
               <span className="text-[13px] text-ink-tertiary">
                 {person.role === 'rabbi' ? 'R' : 'W'}
               </span>

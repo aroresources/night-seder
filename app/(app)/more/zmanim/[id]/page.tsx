@@ -33,8 +33,13 @@ export default async function ZmanPage(props: PageProps<'/more/zmanim/[id]'>) {
 
   const pickable = people
     .filter((person) => person.active && person.in_night_seder)
-    .map((person) => ({ id: person.id, name: person.name, role: person.role }));
-  const unpaired = pickable.filter((person) => !pairedIds.has(person.id));
+    .map((person) => ({
+      id: person.id,
+      name: person.name,
+      role: person.role,
+      paired: pairedIds.has(person.id),
+    }));
+  const unpaired = pickable.filter((person) => !person.paired);
 
   const nightsTotal = scheduledNights(zman, daysOff).length;
   const otherZmanim = allZmanim.filter((other) => other.id !== id);
@@ -174,7 +179,7 @@ export default async function ZmanPage(props: PageProps<'/more/zmanim/[id]'>) {
           )}
         </Group>
 
-        <PairBuilder zmanId={id} people={unpaired} />
+        <PairBuilder zmanId={id} people={pickable} />
 
         <Group title="Still unpaired">
           {unpaired.length === 0 ? (
