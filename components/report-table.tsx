@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react';
 
+import type { Group } from '@/lib/types';
+
 import { Chip } from './ui';
 
 export interface ReportRow {
@@ -16,6 +18,8 @@ export interface ReportRow {
   percent: number;
   flagged: boolean;
   streak: number;
+  /** The topic groups he is tagged with. */
+  groupIds: string[];
 }
 
 type Sort = 'name' | 'percent';
@@ -29,24 +33,44 @@ function csvField(value: string | number): string {
 
 export function ReportTable({
   rows,
+  groups,
   filename,
   showPair,
 }: {
   rows: ReportRow[];
+  groups: Group[];
   filename: string;
   showPair: boolean;
 }) {
   const [sort, setSort] = useState<Sort>('name');
   const [filter, setFilter] = useState<Filter>('all');
+  const [topic, setTopic] = useState<string | null>(null);
 
   const visible = useMemo(() => {
-    const filtered = rows.filter((row) => filter === 'all' || row.role === filter);
+    const filtered = rows.filter(
+      (row) =>
+        (filter === 'all' || row.role === filter) &&
+        (topic === null || row.groupIds.includes(topic)),
+    );
     return [...filtered].sort((a, b) =>
       sort === 'name'
         ? a.sortKey.localeCompare(b.sortKey)
         : b.percent - a.percent || a.sortKey.localeCompare(b.sortKey),
     );
-  }, [rows, sort, filter]);
+  }, [rows, sort, filter, topic]);
+
+  // The tiles at the top of the screen are the whole program. This is whoever
+  // is on screen right now, which is the point of filtering to a group.
+  const attended = visible.reduce((sum, row) => sum + row.attended, 0);
+  const expected = visible.reduce((sum, row) => sum + row.expected, 0);
+  const percent = expected === 0 ? 0 : Math.round((attended / expected) * 100);
+  const shownLabel = topic
+    ? (groups.find((group) => group.id === topic)?.name ?? 'Group')
+    : filter === 'all'
+      ? 'Everyone'
+      : filter === 'rabbi'
+        ? 'Rabbis'
+        : 'Working';
 
   function downloadCsv() {
     const header = ['Name', 'Role', ...(showPair ? ['Pair'] : []), 'Attended', 'Expected', 'Percent'];
@@ -124,6 +148,31 @@ export function ReportTable({
           ))}
         </div>
       </div>
+
+      {groups.length > 0 ? (
+        <div className="mb-2 flex gap-2 overflow-x-auto">
+          {groups.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setTopic(topic === option.id ? null : option.id)}
+              aria-pressed={topic === option.id}
+              className={`min-h-[2.25rem] shrink-0 rounded-full px-3 text-[15px] ${
+                topic === option.id ? 'bg-accent text-on-accent' : 'bg-surface text-ink-secondary'
+              }`}
+            >
+              {option.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      <p className="px-1 pb-2 text-[13px] text-ink-secondary">
+        {shownLabel} · {visible.length} {visible.length === 1 ? 'person' : 'people'} ·{' '}
+        <span className="tabular-nums">
+          {attended}/{expected} · {percent}%
+        </span>
+      </p>
 
       <div className="divide-hairline overflow-hidden rounded-xl bg-surface">
         {visible.length === 0 ? (

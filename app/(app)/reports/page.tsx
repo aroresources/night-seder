@@ -28,6 +28,8 @@ import {
   getAllAttendance,
   getCurrentZman,
   getDafDaysOff,
+  getGroupMembership,
+  getGroups,
   getPairs,
   getPeople,
   getSettings,
@@ -51,6 +53,7 @@ function buildRows(
   allAttendance: AttendanceRow[],
   threshold: number,
   pairOf: (personId: string) => string | null,
+  groupsOf: (personId: string) => string[],
 ): ReportRow[] {
   const byPerson = attendanceByPerson(allAttendance);
   const allHeld = toHeldDates(allAttendance);
@@ -71,6 +74,7 @@ function buildRows(
         percent: stats.percent,
         flagged: person.active && streak >= threshold,
         streak,
+        groupIds: groupsOf(person.id),
       };
     })
     .filter((row) => row.expected > 0 || row.attended > 0);
@@ -144,16 +148,29 @@ export default async function ReportsPage(props: PageProps<'/reports'>) {
   const searchParams = await props.searchParams;
   const now = today();
 
-  const [people, settings, zmanim, currentZman, nightAttendance, dafAttendance, dafDaysOff] =
-    await Promise.all([
-      getPeople(),
-      getSettings(),
-      getZmanim(),
-      getCurrentZman(),
-      getAllAttendance('night_attendance'),
-      getAllAttendance('daf_attendance'),
-      getDafDaysOff(),
-    ]);
+  const [
+    people,
+    settings,
+    zmanim,
+    currentZman,
+    nightAttendance,
+    dafAttendance,
+    dafDaysOff,
+    groups,
+    membership,
+  ] = await Promise.all([
+    getPeople(),
+    getSettings(),
+    getZmanim(),
+    getCurrentZman(),
+    getAllAttendance('night_attendance'),
+    getAllAttendance('daf_attendance'),
+    getDafDaysOff(),
+    getGroups(),
+    getGroupMembership(),
+  ]);
+
+  const groupsOf = (personId: string) => membership.get(personId) ?? [];
 
   // Night Seder ----------------------------------------------------------
 
@@ -188,8 +205,13 @@ export default async function ReportsPage(props: PageProps<'/reports'>) {
     ? heldDatesInRange(nightAttendance, zman.start_date, minDate(zman.end_date, now))
     : [];
   const nightRows = zman
-    ? buildRows(people, nightHeld, nightAttendance, settings.night_absence_threshold, (id) =>
-        pairNameFor.get(id)?.join(', ') ?? null,
+    ? buildRows(
+        people,
+        nightHeld,
+        nightAttendance,
+        settings.night_absence_threshold,
+        (id) => pairNameFor.get(id)?.join(', ') ?? null,
+        groupsOf,
       )
     : [];
 
@@ -250,6 +272,7 @@ export default async function ReportsPage(props: PageProps<'/reports'>) {
     dafAttendance,
     settings.daf_absence_threshold,
     () => null,
+    groupsOf,
   );
 
   const dafCounts = new Map<CalendarDate, number>();
@@ -278,6 +301,7 @@ export default async function ReportsPage(props: PageProps<'/reports'>) {
             <Summary label="Nights held" held={nightHeld.length} rows={nightRows} />
             <ReportTable
               rows={nightRows}
+              groups={groups}
               showPair
               filename={`night-seder-${zman.name.toLowerCase().replace(/\s+/g, '-')}.csv`}
             />
@@ -320,7 +344,12 @@ export default async function ReportsPage(props: PageProps<'/reports'>) {
         <h2 className="px-5 pt-8 text-[20px] font-semibold">Daf</h2>
         <DafRangePicker range={dafRange} from={dafStart} to={dafEnd} />
         <Summary label="Mornings held" held={dafHeld.length} rows={dafRows} />
-        <ReportTable rows={dafRows} showPair={false} filename={`daf-${dafStart}-to-${dafEnd}.csv`} />
+        <ReportTable
+          rows={dafRows}
+          groups={groups}
+          showPair={false}
+          filename={`daf-${dafStart}-to-${dafEnd}.csv`}
+        />
 
         <DateList
           title="Mornings held"
