@@ -119,6 +119,7 @@ export async function updatePerson(id: string, form: FormData) {
       notes: optionalText(form, 'notes'),
       in_night_seder: checkbox(form, 'in_night_seder'),
       in_daf: checkbox(form, 'in_daf'),
+      in_shachris: checkbox(form, 'in_shachris'),
       start_date: optionalDate(form, 'start_date') ?? today(),
       gets_paid: checkbox(form, 'gets_paid'),
       monthly_amount_cents: monthlyAmount(form),
