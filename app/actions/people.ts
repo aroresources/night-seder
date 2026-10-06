@@ -9,6 +9,9 @@ import { parseFullName, type NameParts } from '@/lib/names';
 import { supabaseServer } from '@/lib/supabase/server';
 import type { Role } from '@/lib/types';
 
+/** Which morning programme a person is being added to. */
+type MorningFlag = 'in_daf' | 'in_shachris';
+
 import { checkbox, optionalDate, optionalText, text } from './form';
 import { setPersonGroups } from './groups';
 
@@ -58,6 +61,7 @@ export async function createPerson(form: FormData) {
       notes: optionalText(form, 'notes'),
       in_night_seder: checkbox(form, 'in_night_seder'),
       in_daf: checkbox(form, 'in_daf'),
+      in_shachris: checkbox(form, 'in_shachris'),
       start_date: optionalDate(form, 'start_date') ?? today(),
       gets_paid: checkbox(form, 'gets_paid'),
       monthly_amount_cents: monthlyAmount(form),
@@ -89,6 +93,7 @@ export async function bulkAddPeople(form: FormData) {
     role: role(form),
     in_night_seder: checkbox(form, 'in_night_seder'),
     in_daf: checkbox(form, 'in_daf'),
+    in_shachris: checkbox(form, 'in_shachris'),
     start_date: optionalDate(form, 'start_date') ?? today(),
   };
 
@@ -179,16 +184,18 @@ export async function deletePerson(id: string) {
   redirect('/more/people');
 }
 
-/** Used by the Daf screen's "Add someone to the Daf". */
-export async function addExistingPersonToDaf(id: string) {
+/** Used by the Morning screen's "Add someone to Daf / Shachris". */
+export async function addPersonToMorning(flag: MorningFlag, id: string) {
   const supabase = await supabaseServer();
-  const { error } = await supabase.from('people').update({ in_daf: true }).eq('id', id);
+  // Spelled out rather than a computed key: the Insert type rejects those.
+  const patch = flag === 'in_daf' ? { in_daf: true } : { in_shachris: true };
+  const { error } = await supabase.from('people').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
   refreshEverything();
 }
 
-/** The Daf screen's quick add takes one box, so the line gets split like a paste. */
-export async function createPersonForDaf(form: FormData) {
+/** The Morning quick add takes one box, so the line gets split like a paste. */
+export async function createPersonForMorning(flag: MorningFlag, form: FormData) {
   const supabase = await supabaseServer();
   const parts = parseFullName(text(form, 'name'));
   if (!parts) throw new Error('A name is required');
@@ -196,7 +203,7 @@ export async function createPersonForDaf(form: FormData) {
   const { error } = await supabase.from('people').insert({
     ...parts,
     role: role(form),
-    in_daf: true,
+    ...(flag === 'in_daf' ? { in_daf: true } : { in_shachris: true }),
     in_night_seder: checkbox(form, 'in_night_seder'),
     start_date: today(),
   });

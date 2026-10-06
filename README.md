@@ -4,10 +4,11 @@ Attendance for the night seder program and the daf yomi shiur. One user, one
 phone, meant to be used standing in the room with one thumb.
 
 - **Tonight** — one card per pair, tap a name to mark him present.
-- **Daf** — the same thing as a flat list for the morning shiur.
+- **Morning** — two things to mark, Daf and Shachris, each a flat list. Both run
+  every morning except Shabbos, each with its own days off and its own people.
 - **Contact** — who to call: missed streaks, follow-ups, and a log of what you said.
 - **Reports** — attendance per person and per pair, plus the nights nobody recorded.
-- **More** — people, zmanim, payments, Daf days off, settings, sign out.
+- **More** — people, groups, zmanim, payments, morning days off, settings, sign out.
 
 Some of the men are paid. Tick **Gets paid** on a person and give him a usual
 monthly amount; then under **More → Payments** add a period (usually a Jewish

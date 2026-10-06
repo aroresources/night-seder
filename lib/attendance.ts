@@ -89,7 +89,7 @@ export function scheduledNights(
 
 // Daf --------------------------------------------------------------------
 
-export function dafScheduleStatus(
+export function morningScheduleStatus(
   daysOff: readonly DayOff[],
   date: CalendarDate,
 ): ScheduleStatus {
@@ -101,8 +101,8 @@ export function dafScheduleStatus(
   return { scheduled: true, reason: null };
 }
 
-/** Every date in the range except Saturdays and Daf days off. */
-export function scheduledDafMornings(
+/** Every date in the range except Shabbos and that programme's days off. */
+export function scheduledMornings(
   start: CalendarDate,
   end: CalendarDate,
   daysOff: readonly DayOff[],

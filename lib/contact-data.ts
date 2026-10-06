@@ -31,12 +31,22 @@ export interface ContactData {
  * computed for everyone in one pass, never one query per person.
  */
 export async function loadContactData(): Promise<ContactData> {
-  const [people, settings, nightAttendance, dafAttendance, correspondence, groups, membership] =
+  const [
+    people,
+    settings,
+    nightAttendance,
+    dafAttendance,
+    shachrisAttendance,
+    correspondence,
+    groups,
+    membership,
+  ] =
     await Promise.all([
       getPeople(),
       getSettings(),
       getAllAttendance('night_attendance'),
       getAllAttendance('daf_attendance'),
+      getAllAttendance('shachris_attendance'),
       getCorrespondence(),
       getGroups(),
       getGroupMembership(),
@@ -50,6 +60,7 @@ export async function loadContactData(): Promise<ContactData> {
 
   const nightStreaks = streaksForAll(windows, nightAttendance);
   const dafStreaks = streaksForAll(windows, dafAttendance);
+  const shachrisStreaks = streaksForAll(windows, shachrisAttendance);
 
   const entriesByPerson = new Map<string, Correspondence[]>();
   for (const entry of correspondence) {
@@ -62,6 +73,7 @@ export async function loadContactData(): Promise<ContactData> {
   const thresholds = {
     night: settings.night_absence_threshold,
     daf: settings.daf_absence_threshold,
+    shachris: settings.shachris_absence_threshold,
   };
 
   const rows: ContactRow[] = people.map((person) => {
@@ -69,7 +81,8 @@ export async function loadContactData(): Promise<ContactData> {
     const latest = entries[0] ?? null;
     const night = nightStreaks.get(person.id) ?? NO_STREAK;
     const daf = dafStreaks.get(person.id) ?? NO_STREAK;
-    const reasons = contactReasons(person, night, daf, latest, thresholds, now);
+    const shachris = shachrisStreaks.get(person.id) ?? NO_STREAK;
+    const reasons = contactReasons(person, { night, daf, shachris }, latest, thresholds, now);
 
     return {
       id: person.id,

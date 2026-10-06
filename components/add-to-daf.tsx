@@ -16,10 +16,12 @@ export interface Candidate {
  * or create one on the spot, without leaving the morning's list.
  */
 export function AddToDaf({
+  label,
   candidates,
   onAddExisting,
   onCreate,
 }: {
+  label: string;
   candidates: Candidate[];
   onAddExisting: (personId: string) => Promise<void>;
   onCreate: (form: FormData) => Promise<void>;
@@ -50,7 +52,7 @@ export function AddToDaf({
     return (
       <div className="px-4 pt-4">
         <Button className="px-0" onClick={() => setMode(candidates.length > 0 ? 'existing' : 'new')}>
-          Add someone to the Daf
+          {label}
         </Button>
       </div>
     );
@@ -96,7 +98,7 @@ export function AddToDaf({
               disabled={!selected || pending}
               onClick={() => run(() => onAddExisting(selected))}
             >
-              Add to Daf
+              {label.replace(/^Add someone to /, 'Add to ')}
             </Button>
             <Button onClick={() => setMode('closed')}>Cancel</Button>
           </div>

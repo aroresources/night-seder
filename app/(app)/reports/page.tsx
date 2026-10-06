@@ -9,7 +9,7 @@ import {
   missedStreak,
   notRecordedDates,
   personStats,
-  scheduledDafMornings,
+  scheduledMornings,
   scheduledNights,
   heldDates as toHeldDates,
   type AttendanceRow,
@@ -27,7 +27,7 @@ import { nameSortKey } from '@/lib/names';
 import {
   getAllAttendance,
   getCurrentZman,
-  getDafDaysOff,
+  getMorningDaysOff,
   getGroupMembership,
   getGroups,
   getPairs,
@@ -36,6 +36,7 @@ import {
   getZmanDaysOff,
   getZmanim,
 } from '@/lib/queries';
+import { MORNING_PROGRAMS } from '@/lib/types';
 import type { Person } from '@/lib/types';
 
 function param(value: string | string[] | undefined): string | undefined {
@@ -155,7 +156,9 @@ export default async function ReportsPage(props: PageProps<'/reports'>) {
     currentZman,
     nightAttendance,
     dafAttendance,
+    shachrisAttendance,
     dafDaysOff,
+    shachrisDaysOff,
     groups,
     membership,
   ] = await Promise.all([
@@ -165,7 +168,9 @@ export default async function ReportsPage(props: PageProps<'/reports'>) {
     getCurrentZman(),
     getAllAttendance('night_attendance'),
     getAllAttendance('daf_attendance'),
-    getDafDaysOff(),
+    getAllAttendance('shachris_attendance'),
+    getMorningDaysOff('daf_days_off'),
+    getMorningDaysOff('shachris_days_off'),
     getGroups(),
     getGroupMembership(),
   ]);
@@ -265,26 +270,41 @@ export default async function ReportsPage(props: PageProps<'/reports'>) {
     dafStart = addDays(now, -29);
   }
 
-  const dafHeld = heldDatesInRange(dafAttendance, dafStart, minDate(dafEnd, now));
-  const dafRows = buildRows(
-    people.filter((person) => person.in_daf || dafAttendance.some((row) => row.person_id === person.id)),
-    dafHeld,
-    dafAttendance,
-    settings.daf_absence_threshold,
-    () => null,
-    groupsOf,
-  );
+  const morningEnd = minDate(dafEnd, now);
 
-  const dafCounts = new Map<CalendarDate, number>();
-  for (const row of dafAttendance) {
-    dafCounts.set(row.date, (dafCounts.get(row.date) ?? 0) + 1);
-  }
+  // Daf and Shachris are the same report twice over, so they are built the
+  // same way rather than written out twice. Both share the range picker.
+  const morningSections = MORNING_PROGRAMS.map((program) => {
+    const attendance = program.value === 'daf' ? dafAttendance : shachrisAttendance;
+    const daysOff = program.value === 'daf' ? dafDaysOff : shachrisDaysOff;
 
-  const dafNotRecorded = notRecordedDates(
-    scheduledDafMornings(dafStart, minDate(dafEnd, now), dafDaysOff),
-    dafAttendance,
-    now,
-  );
+    const held = heldDatesInRange(attendance, dafStart, morningEnd);
+    const rows = buildRows(
+      // Anyone in the programme, plus anyone who turned up without being in it.
+      people.filter(
+        (person) =>
+          person[program.flag] || attendance.some((row) => row.person_id === person.id),
+      ),
+      held,
+      attendance,
+      settings[program.threshold],
+      () => null,
+      groupsOf,
+    );
+
+    const counts = new Map<CalendarDate, number>();
+    for (const row of attendance) {
+      counts.set(row.date, (counts.get(row.date) ?? 0) + 1);
+    }
+
+    const notRecorded = notRecordedDates(
+      scheduledMornings(dafStart, morningEnd, daysOff),
+      attendance,
+      now,
+    );
+
+    return { program, held, rows, counts, notRecorded };
+  });
 
   return (
     <>
@@ -341,30 +361,36 @@ export default async function ReportsPage(props: PageProps<'/reports'>) {
           </>
         )}
 
-        <h2 className="px-5 pt-8 text-[20px] font-semibold">Daf</h2>
+        <h2 className="px-5 pt-8 text-[20px] font-semibold">Morning</h2>
         <DafRangePicker range={dafRange} from={dafStart} to={dafEnd} />
-        <Summary label="Mornings held" held={dafHeld.length} rows={dafRows} />
-        <ReportTable
-          rows={dafRows}
-          groups={groups}
-          showPair={false}
-          filename={`daf-${dafStart}-to-${dafEnd}.csv`}
-        />
 
-        <DateList
-          title="Mornings held"
-          dates={[...dafHeld].reverse()}
-          counts={dafCounts}
-          hrefFor={(date) => `/daf?date=${date}`}
-          empty="Nothing recorded in this range yet."
-        />
+        {morningSections.map((section) => (
+          <div key={section.program.value}>
+            <h3 className="px-5 pt-6 text-[17px] font-semibold">{section.program.label}</h3>
+            <Summary label="Mornings held" held={section.held.length} rows={section.rows} />
+            <ReportTable
+              rows={section.rows}
+              groups={groups}
+              showPair={false}
+              filename={`${section.program.value}-${dafStart}-to-${dafEnd}.csv`}
+            />
 
-        <DateList
-          title="Not recorded"
-          dates={[...dafNotRecorded].reverse()}
-          hrefFor={(date) => `/daf?date=${date}`}
-          empty="Every scheduled morning has something recorded."
-        />
+            <DateList
+              title="Mornings held"
+              dates={[...section.held].reverse()}
+              counts={section.counts}
+              hrefFor={(date) => `/morning?date=${date}&event=${section.program.value}`}
+              empty="Nothing recorded in this range yet."
+            />
+
+            <DateList
+              title="Not recorded"
+              dates={[...section.notRecorded].reverse()}
+              hrefFor={(date) => `/morning?date=${date}&event=${section.program.value}`}
+              empty="Every scheduled morning has something recorded."
+            />
+          </div>
+        ))}
       </div>
     </>
   );

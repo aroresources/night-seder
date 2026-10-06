@@ -29,13 +29,24 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
   const { id } = await props.params;
   const now = today();
 
-  const [person, settings, zman, nightAttendance, dafAttendance, entries, groups, membership] =
+  const [
+    person,
+    settings,
+    zman,
+    nightAttendance,
+    dafAttendance,
+    shachrisAttendance,
+    entries,
+    groups,
+    membership,
+  ] =
     await Promise.all([
       getPerson(id),
       getSettings(),
       getCurrentZman(),
       getAllAttendance('night_attendance'),
       getAllAttendance('daf_attendance'),
+      getAllAttendance('shachris_attendance'),
       getCorrespondence(id),
       getGroups(),
       getGroupMembership(),
@@ -53,9 +64,11 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
 
   const nightByPerson = attendanceByPerson(nightAttendance).get(id);
   const dafByPerson = attendanceByPerson(dafAttendance).get(id);
+  const shachrisByPerson = attendanceByPerson(shachrisAttendance).get(id);
 
   const nightHeldAll = heldDates(nightAttendance);
   const dafHeldAll = heldDates(dafAttendance);
+  const shachrisHeldAll = heldDates(shachrisAttendance);
 
   const zmanStats = zman
     ? personStats(
@@ -66,19 +79,25 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
     : null;
   const allTime = personStats(window, nightHeldAll, nightByPerson);
   const dafStats = personStats(window, dafHeldAll, dafByPerson);
+  const shachrisStats = personStats(window, shachrisHeldAll, shachrisByPerson);
 
   const nightStreak = missedStreak(window, nightHeldAll, nightByPerson);
   const dafStreak = missedStreak(window, dafHeldAll, dafByPerson);
+  const shachrisStreak = missedStreak(window, shachrisHeldAll, shachrisByPerson);
 
   const recent = [
     ...[...(nightByPerson ?? [])].map((date) => ({ date, program: 'Night' })),
     ...[...(dafByPerson ?? [])].map((date) => ({ date, program: 'Daf' })),
+    ...[...(shachrisByPerson ?? [])].map((date) => ({ date, program: 'Shachris' })),
   ]
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
     .slice(0, 20);
 
   const hasHistory =
-    (nightByPerson?.size ?? 0) > 0 || (dafByPerson?.size ?? 0) > 0 || entries.length > 0;
+    (nightByPerson?.size ?? 0) > 0 ||
+    (dafByPerson?.size ?? 0) > 0 ||
+    (shachrisByPerson?.size ?? 0) > 0 ||
+    entries.length > 0;
 
   return (
     <>
@@ -117,6 +136,12 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
             <span className="flex-1 text-[15px]">Daf</span>
             <span className="text-[15px] tabular-nums text-ink-secondary">
               {dafStats.attended}/{dafStats.expected} · {dafStats.percent}%
+            </span>
+          </Row>
+          <Row>
+            <span className="flex-1 text-[15px]">Shachris</span>
+            <span className="text-[15px] tabular-nums text-ink-secondary">
+              {shachrisStats.attended}/{shachrisStats.expected} · {shachrisStats.percent}%
             </span>
           </Row>
           {person.gets_paid ? (
@@ -183,6 +208,13 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
               {person.in_daf ? (
                 <Chip tone={dafStreak >= settings.daf_absence_threshold ? 'accent' : 'plain'}>
                   {dafStreak} Daf
+                </Chip>
+              ) : null}
+              {person.in_shachris ? (
+                <Chip
+                  tone={shachrisStreak >= settings.shachris_absence_threshold ? 'accent' : 'plain'}
+                >
+                  {shachrisStreak} Shachris
                 </Chip>
               ) : null}
             </div>

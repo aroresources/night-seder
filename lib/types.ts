@@ -42,6 +42,7 @@ export type Person = {
   active: boolean;
   in_night_seder: boolean;
   in_daf: boolean;
+  in_shachris: boolean;
   start_date: CalendarDate;
   end_date: CalendarDate | null;
   track_contact: boolean;
@@ -163,6 +164,7 @@ export type Settings = {
   created_at: string;
   night_absence_threshold: number;
   daf_absence_threshold: number;
+  shachris_absence_threshold: number;
 };
 
 /**
@@ -191,7 +193,9 @@ export type Database = {
       pair_members: TableDef<PairMember, 'pair_id' | 'person_id'>;
       night_attendance: TableDef<Attendance, 'date' | 'person_id'>;
       daf_attendance: TableDef<Attendance, 'date' | 'person_id'>;
+      shachris_attendance: TableDef<Attendance, 'date' | 'person_id'>;
       daf_days_off: TableDef<DafDayOff, 'date'>;
+      shachris_days_off: TableDef<DafDayOff, 'date'>;
       correspondence: TableDef<Correspondence, 'person_id' | 'channel'>;
       groups: TableDef<Group, 'name'>;
       person_groups: TableDef<PersonGroup, 'person_id' | 'group_id'>;
@@ -204,5 +208,38 @@ export type Database = {
   };
 };
 
-/** The two attendance tables share a shape; this names which one to write to. */
-export type AttendanceTable = 'night_attendance' | 'daf_attendance';
+/** The attendance tables share a shape; this names which one to write to. */
+export type AttendanceTable = 'night_attendance' | 'daf_attendance' | 'shachris_attendance';
+
+/** The two things that happen in the morning, behind the Morning tab. */
+export type MorningProgram = 'daf' | 'shachris';
+
+export const MORNING_PROGRAMS: {
+  value: MorningProgram;
+  label: string;
+  table: 'daf_attendance' | 'shachris_attendance';
+  daysOffTable: 'daf_days_off' | 'shachris_days_off';
+  flag: 'in_daf' | 'in_shachris';
+  threshold: 'daf_absence_threshold' | 'shachris_absence_threshold';
+}[] = [
+  {
+    value: 'daf',
+    label: 'Daf',
+    table: 'daf_attendance',
+    daysOffTable: 'daf_days_off',
+    flag: 'in_daf',
+    threshold: 'daf_absence_threshold',
+  },
+  {
+    value: 'shachris',
+    label: 'Shachris',
+    table: 'shachris_attendance',
+    daysOffTable: 'shachris_days_off',
+    flag: 'in_shachris',
+    threshold: 'shachris_absence_threshold',
+  },
+];
+
+export function morningProgram(value: string | undefined): (typeof MORNING_PROGRAMS)[number] {
+  return MORNING_PROGRAMS.find((p) => p.value === value) ?? MORNING_PROGRAMS[0];
+}

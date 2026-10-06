@@ -14,6 +14,7 @@ export interface ContactPerson {
   active: boolean;
   in_night_seder: boolean;
   in_daf: boolean;
+  in_shachris: boolean;
   snoozed_until: CalendarDate | null;
 }
 
@@ -25,6 +26,13 @@ export interface ContactEntry {
 export interface Thresholds {
   night: number;
   daf: number;
+  shachris: number;
+}
+
+export interface Streaks {
+  night: Streak;
+  daf: Streak;
+  shachris: Streak;
 }
 
 export interface Streak {
@@ -33,7 +41,7 @@ export interface Streak {
 }
 
 export interface Reason {
-  kind: 'night' | 'daf' | 'follow_up';
+  kind: 'night' | 'daf' | 'shachris' | 'follow_up';
   /** The chip text, e.g. "Missed 4 nights". */
   label: string;
   /** The line under it, e.g. "Last came Sep 3". */
@@ -59,27 +67,34 @@ function lastAttendedDetail(last: CalendarDate | null): string {
  */
 export function contactReasons(
   person: ContactPerson,
-  night: Streak,
-  daf: Streak,
+  streaks: Streaks,
   latestEntry: ContactEntry | null,
   thresholds: Thresholds,
   todayDate: CalendarDate,
 ): Reason[] {
   const reasons: Reason[] = [];
 
-  if (person.active && person.in_night_seder && night.streak >= thresholds.night) {
+  if (person.active && person.in_night_seder && streaks.night.streak >= thresholds.night) {
     reasons.push({
       kind: 'night',
-      label: `Missed ${plural(night.streak, 'night', 'nights')}`,
-      detail: lastAttendedDetail(night.lastAttended),
+      label: `Missed ${plural(streaks.night.streak, 'night', 'nights')}`,
+      detail: lastAttendedDetail(streaks.night.lastAttended),
     });
   }
 
-  if (person.active && person.in_daf && daf.streak >= thresholds.daf) {
+  if (person.active && person.in_daf && streaks.daf.streak >= thresholds.daf) {
     reasons.push({
       kind: 'daf',
-      label: `Missed ${plural(daf.streak, 'Daf morning', 'Daf mornings')}`,
-      detail: lastAttendedDetail(daf.lastAttended),
+      label: `Missed ${plural(streaks.daf.streak, 'Daf morning', 'Daf mornings')}`,
+      detail: lastAttendedDetail(streaks.daf.lastAttended),
+    });
+  }
+
+  if (person.active && person.in_shachris && streaks.shachris.streak >= thresholds.shachris) {
+    reasons.push({
+      kind: 'shachris',
+      label: `Missed ${plural(streaks.shachris.streak, 'Shachris', 'Shachris')}`,
+      detail: lastAttendedDetail(streaks.shachris.lastAttended),
     });
   }
 

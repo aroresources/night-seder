@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 
 import {
   attendanceByPerson,
-  dafScheduleStatus,
+  morningScheduleStatus,
   heldDates,
   heldDatesInRange,
   missedStreak,
   nightScheduleStatus,
   notRecordedDates,
   personStats,
-  scheduledDafMornings,
+  scheduledMornings,
   scheduledNights,
   streaksForAll,
   type AttendanceRow,
@@ -78,18 +78,18 @@ test('Friday says why, and a day off gives its reason', () => {
 });
 
 test('Daf runs every day but Saturday, minus its own days off', () => {
-  assert.equal(dafScheduleStatus([], '2026-09-18').scheduled, true, 'Friday');
-  assert.equal(dafScheduleStatus([], '2026-09-20').scheduled, true, 'Sunday');
-  assert.deepEqual(dafScheduleStatus([], '2026-09-19'), {
+  assert.equal(morningScheduleStatus([], '2026-09-18').scheduled, true, 'Friday');
+  assert.equal(morningScheduleStatus([], '2026-09-20').scheduled, true, 'Sunday');
+  assert.deepEqual(morningScheduleStatus([], '2026-09-19'), {
     scheduled: false,
     reason: 'Saturday',
   });
-  assert.deepEqual(dafScheduleStatus([{ date: '2026-09-21', reason: 'Yom Tov' }], '2026-09-21'), {
+  assert.deepEqual(morningScheduleStatus([{ date: '2026-09-21', reason: 'Yom Tov' }], '2026-09-21'), {
     scheduled: false,
     reason: 'Day off: Yom Tov',
   });
 
-  const mornings = scheduledDafMornings('2026-09-13', '2026-09-19', [
+  const mornings = scheduledMornings('2026-09-13', '2026-09-19', [
     { date: '2026-09-16', reason: null },
   ]);
   assert.deepEqual(mornings, [

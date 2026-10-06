@@ -6,6 +6,7 @@ import { compareByName } from '@/lib/names';
 import { supabaseServer } from '@/lib/supabase/server';
 import type {
   Attendance,
+  AttendanceTable,
   Correspondence,
   DafDayOff,
   Group,
@@ -124,9 +125,12 @@ export async function getZmanDaysOff(zmanId: string): Promise<ZmanDayOff[]> {
   );
 }
 
-export async function getDafDaysOff(): Promise<DafDayOff[]> {
+/** Days off for one of the morning programs. */
+export async function getMorningDaysOff(
+  table: 'daf_days_off' | 'shachris_days_off',
+): Promise<DafDayOff[]> {
   const supabase = await supabaseServer();
-  return unwrap(await supabase.from('daf_days_off').select('*').order('date', { ascending: false }));
+  return unwrap(await supabase.from(table).select('*').order('date', { ascending: false }));
 }
 
 export interface PairWithMembers extends Pair {
@@ -158,7 +162,7 @@ export async function getPairs(zmanId: string): Promise<PairWithMembers[]> {
 
 /** Attendance rows for one date, for one program. */
 export async function getAttendanceOn(
-  table: 'night_attendance' | 'daf_attendance',
+  table: AttendanceTable,
   date: CalendarDate,
 ): Promise<Attendance[]> {
   const supabase = await supabaseServer();
@@ -167,7 +171,7 @@ export async function getAttendanceOn(
 
 /** Every attendance row for a program, optionally bounded by date. */
 export async function getAllAttendance(
-  table: 'night_attendance' | 'daf_attendance',
+  table: AttendanceTable,
   range?: { start: CalendarDate; end: CalendarDate },
 ): Promise<Attendance[]> {
   const supabase = await supabaseServer();

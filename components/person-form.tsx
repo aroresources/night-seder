@@ -122,6 +122,16 @@ export function PersonForm({
           <label className="flex min-h-[2.75rem] items-center gap-3 px-4 py-2.5">
             <input
               type="checkbox"
+              name="in_shachris"
+              defaultChecked={person ? person.in_shachris : false}
+              className="h-5 w-5 accent-[var(--accent)]"
+            />
+            <span className="text-[17px]">In Shachris</span>
+          </label>
+
+          <label className="flex min-h-[2.75rem] items-center gap-3 px-4 py-2.5">
+            <input
+              type="checkbox"
               name="gets_paid"
               defaultChecked={person ? person.gets_paid : false}
               className="h-5 w-5 accent-[var(--accent)]"

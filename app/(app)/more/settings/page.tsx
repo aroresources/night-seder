@@ -41,6 +41,16 @@ export default async function SettingsPage() {
                 className={inputClasses}
               />
             </Field>
+            <Field label="...missed Shachris in a row">
+              <input
+                type="number"
+                name="shachris_absence_threshold"
+                min={1}
+                inputMode="numeric"
+                defaultValue={settings.shachris_absence_threshold}
+                className={inputClasses}
+              />
+            </Field>
           </div>
           <p className="px-1 pt-2 text-[13px] text-ink-secondary">
             Missed sessions, not missed days: Fridays, days off and the break between zmanim never

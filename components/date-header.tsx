@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { addDays, formatHeaderDate, type CalendarDate } from '@/lib/dates';
 
@@ -18,9 +18,14 @@ export function DateHeader({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   function go(to: CalendarDate) {
-    router.push(`${pathname}?date=${to}`);
+    // Keep everything else in the query, so stepping a day does not bounce you
+    // from Shachris back to Daf.
+    const next = new URLSearchParams(searchParams.toString());
+    next.set('date', to);
+    router.push(`${pathname}?${next.toString()}`);
   }
 
   return (
