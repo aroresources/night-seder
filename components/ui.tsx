@@ -15,15 +15,30 @@ export function ScreenHeader({
   title,
   subtitle,
   action,
+  back,
 }: {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   action?: React.ReactNode;
+  /** A way back up, on the left, iOS style. */
+  back?: { href: string; label: string };
 }) {
   return (
     <header className="sticky top-0 z-20 border-b border-hairline bg-canvas/95 pt-safe backdrop-blur">
-      <div className="flex min-h-[3.25rem] items-center justify-between gap-3 px-4 py-2">
-        <div className="min-w-0">
+      <div className="mx-auto flex min-h-[3.25rem] w-full max-w-[480px] items-center gap-3 px-4 py-2">
+        {back ? (
+          <Link
+            href={back.href}
+            className="-ml-2 flex min-h-[2.75rem] shrink-0 items-center gap-0.5 pr-1 pl-2 text-[17px] text-accent active:opacity-60"
+          >
+            <span aria-hidden className="text-[20px] leading-none">
+              &lsaquo;
+            </span>
+            <span className="max-w-[7rem] truncate">{back.label}</span>
+          </Link>
+        ) : null}
+
+        <div className="min-w-0 flex-1">
           <h1 className="truncate text-[17px] font-semibold">{title}</h1>
           {subtitle ? (
             <p className="truncate text-[13px] text-ink-secondary">{subtitle}</p>

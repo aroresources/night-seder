@@ -10,6 +10,8 @@ import { hebrewDateForNight, isCalendarDate, today, withinWindow } from '@/lib/d
 import {
   getAllAttendance,
   getAttendanceOn,
+  getGroupMembership,
+  getGroups,
   getPairs,
   getPeople,
   getZmanDaysOff,
@@ -26,7 +28,12 @@ export default async function TonightPage(props: PageProps<'/'>) {
   const date = readDate(searchParams.date);
   const now = today();
 
-  const [people, zman] = await Promise.all([getPeople(), getZmanForDate(date)]);
+  const [people, zman, topicGroups, membership] = await Promise.all([
+    getPeople(),
+    getZmanForDate(date),
+    getGroups(),
+    getGroupMembership(),
+  ]);
 
   const eligible = people.filter(
     (person) =>
@@ -153,6 +160,8 @@ export default async function TonightPage(props: PageProps<'/'>) {
                 ? { key: 'everyone', title: null, people: eligible }
                 : undefined
             }
+            topicGroups={topicGroups}
+            groupsByPerson={Object.fromEntries(membership)}
             initialPresent={attendance.map((row) => row.person_id)}
           />
         )}

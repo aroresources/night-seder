@@ -57,59 +57,7 @@ export default async function ZmanPage(props: PageProps<'/more/zmanim/[id]'>) {
       />
 
       <div className="mx-auto w-full max-w-[480px] pb-tabbar">
-        {/* Days off ------------------------------------------------------ */}
-        <section className="px-4 pt-4">
-          <form action={addZmanDayOff.bind(null, id)}>
-            <div className="flex flex-col gap-3 rounded-xl bg-surface p-4">
-              <label className="block">
-                <span className="mb-1 block text-[13px] text-ink-secondary">Day off</span>
-                <input
-                  type="date"
-                  name="date"
-                  required
-                  defaultValue={today()}
-                  min={zman.start_date}
-                  max={zman.end_date}
-                  className={inputClasses}
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-[13px] text-ink-secondary">Reason (optional)</span>
-                <input name="reason" placeholder="For example Sukkos" className={inputClasses} />
-              </label>
-              <div>
-                <Button type="submit" variant="filled">
-                  Add day off
-                </Button>
-              </div>
-            </div>
-          </form>
-        </section>
-
-        <Group
-          title="Days off"
-          footer="Adding a day off never deletes attendance. It only takes that night out of the expected count."
-        >
-          {daysOff.length === 0 ? (
-            <p className="px-4 py-3 text-[15px] text-ink-secondary">No days off yet.</p>
-          ) : (
-            daysOff.map((day) => (
-              <Row key={day.id}>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[17px]">{formatCompactDate(day.date)}</p>
-                  {day.reason ? (
-                    <p className="truncate text-[13px] text-ink-secondary">{day.reason}</p>
-                  ) : null}
-                </div>
-                <form action={removeZmanDayOff.bind(null, day.id)}>
-                  <button type="submit" className="min-h-[2.75rem] px-2 text-[15px] text-danger">
-                    Delete
-                  </button>
-                </form>
-              </Row>
-            ))
-          )}
-        </Group>
+        <PairBuilder zmanId={id} people={pickable} />
 
         {/* Pairings ------------------------------------------------------ */}
         <Group title="Pairings">
@@ -179,8 +127,6 @@ export default async function ZmanPage(props: PageProps<'/more/zmanim/[id]'>) {
           )}
         </Group>
 
-        <PairBuilder zmanId={id} people={pickable} />
-
         <Group title="Still unpaired">
           {unpaired.length === 0 ? (
             <p className="px-4 py-3 text-[15px] text-ink-secondary">Everybody is paired.</p>
@@ -218,6 +164,60 @@ export default async function ZmanPage(props: PageProps<'/more/zmanim/[id]'>) {
             </form>
           </section>
         ) : null}
+
+        {/* Days off ------------------------------------------------------ */}
+        <section className="px-4 pt-4">
+          <form action={addZmanDayOff.bind(null, id)}>
+            <div className="flex flex-col gap-3 rounded-xl bg-surface p-4">
+              <label className="block">
+                <span className="mb-1 block text-[13px] text-ink-secondary">Day off</span>
+                <input
+                  type="date"
+                  name="date"
+                  required
+                  defaultValue={today()}
+                  min={zman.start_date}
+                  max={zman.end_date}
+                  className={inputClasses}
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[13px] text-ink-secondary">Reason (optional)</span>
+                <input name="reason" placeholder="For example Sukkos" className={inputClasses} />
+              </label>
+              <div>
+                <Button type="submit" variant="filled">
+                  Add day off
+                </Button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <Group
+          title="Days off"
+          footer="Adding a day off never deletes attendance. It only takes that night out of the expected count."
+        >
+          {daysOff.length === 0 ? (
+            <p className="px-4 py-3 text-[15px] text-ink-secondary">No days off yet.</p>
+          ) : (
+            daysOff.map((day) => (
+              <Row key={day.id}>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[17px]">{formatCompactDate(day.date)}</p>
+                  {day.reason ? (
+                    <p className="truncate text-[13px] text-ink-secondary">{day.reason}</p>
+                  ) : null}
+                </div>
+                <form action={removeZmanDayOff.bind(null, day.id)}>
+                  <button type="submit" className="min-h-[2.75rem] px-2 text-[15px] text-danger">
+                    Delete
+                  </button>
+                </form>
+              </Row>
+            ))
+          )}
+        </Group>
 
         <Group title="Danger">
           <form action={deleteZman.bind(null, id)}>

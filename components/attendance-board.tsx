@@ -3,7 +3,7 @@
 import { useRef, useState, useSyncExternalStore } from 'react';
 
 import { supabaseBrowser } from '@/lib/supabase/client';
-import type { AttendanceTable, Role } from '@/lib/types';
+import type { AttendanceTable, Group, Role } from '@/lib/types';
 import { useToast } from './toast';
 
 export interface BoardPerson {
@@ -81,6 +81,8 @@ export function AttendanceBoard({
   date,
   groups,
   flatGroup,
+  topicGroups = [],
+  groupsByPerson = {},
   initialPresent,
 }: {
   table: AttendanceTable;
@@ -88,19 +90,36 @@ export function AttendanceBoard({
   groups: BoardGroup[];
   /** Everyone in one list. Supplying it offers the by-pair / everyone switch. */
   flatGroup?: BoardGroup;
+  /** Topic groups to filter by, e.g. Hilchasa. Empty hides the chips. */
+  topicGroups?: Group[];
+  /** Person id -> the topic groups he is in. */
+  groupsByPerson?: Record<string, string[]>;
   initialPresent: string[];
 }) {
   const toast = useToast();
   const [present, setPresent] = useState<ReadonlySet<string>>(() => new Set(initialPresent));
+  const [topic, setTopic] = useState<string | null>(null);
   const view = useSyncExternalStore(subscribeToView, readView, serverView);
   const queues = useRef(new Map<string, Promise<unknown>>());
 
-  const shown = flatGroup && view === 'flat' ? [flatGroup] : groups;
-  const everyone = new Set(
-    (flatGroup ? [flatGroup, ...groups] : groups).flatMap((group) =>
-      group.people.map((person) => person.id),
-    ),
-  );
+  /**
+   * Narrow a group to one topic. A pair whose men are all outside the topic
+   * drops away entirely, so filtering to Hilchasa shows only those men —
+   * still grouped by their pairs if that's the view you're in.
+   */
+  const narrow = (group: BoardGroup): BoardGroup => ({
+    ...group,
+    people: topic
+      ? group.people.filter((person) => (groupsByPerson[person.id] ?? []).includes(topic))
+      : group.people,
+  });
+
+  const base = flatGroup && view === 'flat' ? [flatGroup] : groups;
+  const shown = base.map(narrow).filter((group) => group.people.length > 0);
+
+  // The footer counts what's on screen, so filtering to a group tells you how
+  // many of that group are here rather than how many of everyone.
+  const everyone = new Set(shown.flatMap((group) => group.people.map((person) => person.id)));
   const hereCount = [...everyone].filter((id) => present.has(id)).length;
 
   function apply(personId: string, shouldBePresent: boolean) {
@@ -174,7 +193,30 @@ export function AttendanceBoard({
         </div>
       ) : null}
 
+      {topicGroups.length > 0 ? (
+        <div className="flex gap-2 overflow-x-auto px-4 pt-3">
+          {topicGroups.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setTopic(topic === option.id ? null : option.id)}
+              aria-pressed={topic === option.id}
+              className={`min-h-[2.25rem] shrink-0 rounded-full px-3 text-[15px] ${
+                topic === option.id ? 'bg-accent text-on-accent' : 'bg-surface text-ink-secondary'
+              }`}
+            >
+              {option.name}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div className="pb-14">
+        {shown.length === 0 ? (
+          <p className="px-5 pt-6 text-[15px] text-ink-secondary">
+            Nobody here is in that group.
+          </p>
+        ) : null}
         {shown.map((group) => {
           const allHere =
             group.people.length > 0 && group.people.every((person) => present.has(person.id));

@@ -8,7 +8,13 @@ import { ProgramSwitch } from '@/components/program-switch';
 import { Banner, Empty } from '@/components/ui';
 import { morningScheduleStatus } from '@/lib/attendance';
 import { hebrewDate, isCalendarDate, today, withinWindow } from '@/lib/dates';
-import { getAttendanceOn, getMorningDaysOff, getPeople } from '@/lib/queries';
+import {
+  getAttendanceOn,
+  getGroupMembership,
+  getGroups,
+  getMorningDaysOff,
+  getPeople,
+} from '@/lib/queries';
 import { morningProgram } from '@/lib/types';
 
 function param(value: string | string[] | undefined): string | undefined {
@@ -21,10 +27,12 @@ export default async function MorningPage(props: PageProps<'/morning'>) {
   const date = isCalendarDate(dateParam) ? dateParam : today();
   const program = morningProgram(param(searchParams.event));
 
-  const [people, daysOff, attendance] = await Promise.all([
+  const [people, daysOff, attendance, topicGroups, membership] = await Promise.all([
     getPeople(),
     getMorningDaysOff(program.daysOffTable),
     getAttendanceOn(program.table, date),
+    getGroups(),
+    getGroupMembership(),
   ]);
 
   // getPeople already returns everyone in surname order.
@@ -88,6 +96,8 @@ export default async function MorningPage(props: PageProps<'/morning'>) {
             table={program.table}
             date={date}
             groups={[{ key: program.value, title: null, people: eligible }]}
+            topicGroups={topicGroups}
+            groupsByPerson={Object.fromEntries(membership)}
             initialPresent={attendance.map((row) => row.person_id)}
           />
         )}

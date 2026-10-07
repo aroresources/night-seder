@@ -18,7 +18,9 @@ export default async function EditPersonPage(props: PageProps<'/more/people/[id]
   return (
     <>
       <ScreenHeader
-        title="Edit person"
+        title={person.name}
+        subtitle="Editing"
+        back={{ href: `/more/people/${id}`, label: 'Back' }}
         action={
           <Link href={`/more/people/${id}`} className="text-[17px] text-accent">
             Cancel

@@ -109,6 +109,7 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
         ]
           .filter(Boolean)
           .join(' · ')}
+        back={{ href: '/more/people', label: 'People' }}
         action={
           <Link href={`/more/people/${id}/edit`} className="text-[17px] text-accent">
             Edit

@@ -22,11 +22,7 @@ export default async function ContactPersonPage(props: PageProps<'/contact/[id]'
       <ScreenHeader
         title={person.name}
         subtitle={person.role === 'rabbi' ? 'Rabbi' : 'Working'}
-        action={
-          <Link href="/contact" className="text-[17px] text-accent">
-            Contact
-          </Link>
-        }
+        back={{ href: '/contact', label: 'Contact' }}
       />
 
       <div className="mx-auto w-full max-w-[480px] pb-tabbar">
