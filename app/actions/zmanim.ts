@@ -113,6 +113,32 @@ export async function deletePair(id: string) {
   refresh();
 }
 
+/** Add someone to a pair that already exists — a third man, or a replacement. */
+export async function addPairMember(pairId: string, personId: string) {
+  const supabase = await supabaseServer();
+  const { error } = await supabase
+    .from('pair_members')
+    .insert({ pair_id: pairId, person_id: personId });
+  // 23505 is the unique violation: he is already in this pair, which is the
+  // state we were asking for.
+  if (error && error.code !== '23505') throw new Error(error.message);
+  refresh();
+}
+
+/**
+ * Rename a pair. An empty box clears the label, which puts it back to being
+ * the members' names joined with "&" — so it follows the members again.
+ */
+export async function renamePair(pairId: string, form: FormData) {
+  const supabase = await supabaseServer();
+  const { error } = await supabase
+    .from('pairs')
+    .update({ label: optionalText(form, 'label') })
+    .eq('id', pairId);
+  if (error) throw new Error(error.message);
+  refresh();
+}
+
 export async function removePairMember(pairId: string, personId: string) {
   const supabase = await supabaseServer();
   const { error } = await supabase

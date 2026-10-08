@@ -11,6 +11,7 @@ import {
   removeZmanDayOff,
 } from '@/app/actions/zmanim';
 import { PairBuilder } from '@/components/pair-builder';
+import { PairEditor } from '@/components/pair-editor';
 import { Button, Group, Row, ScreenHeader, inputClasses } from '@/components/ui';
 import { scheduledNights } from '@/lib/attendance';
 import { formatCompactDate, formatShortDate, today } from '@/lib/dates';
@@ -121,6 +122,15 @@ export default async function ZmanPage(props: PageProps<'/more/zmanim/[id]'>) {
                       </div>
                     ))}
                   </div>
+
+                  <PairEditor
+                    pairId={pair.id}
+                    label={label}
+                    hasOwnLabel={pair.label !== null}
+                    candidates={pickable.filter(
+                      (person) => !members.some((member) => member.id === person.id),
+                    )}
+                  />
                 </div>
               );
             })
