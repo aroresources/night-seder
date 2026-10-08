@@ -99,28 +99,41 @@ export function AttendanceBoard({
   const toast = useToast();
   const [present, setPresent] = useState<ReadonlySet<string>>(() => new Set(initialPresent));
   const [topic, setTopic] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const view = useSyncExternalStore(subscribeToView, readView, serverView);
   const queues = useRef(new Map<string, Promise<unknown>>());
 
+  const needle = search.trim().toLowerCase();
+
   /**
-   * Narrow a group to one topic. A pair whose men are all outside the topic
-   * drops away entirely, so filtering to Hilchasa shows only those men —
-   * still grouped by their pairs if that's the view you're in.
+   * A group narrows the room: you are taking Oraysa's attendance, so the
+   * footer counts Oraysa. A search only helps you find one man in a long
+   * list, so it hides rows without changing what the footer is counting.
    */
-  const narrow = (group: BoardGroup): BoardGroup => ({
-    ...group,
-    people: topic
-      ? group.people.filter((person) => (groupsByPerson[person.id] ?? []).includes(topic))
-      : group.people,
-  });
+  const inTopic = (person: BoardPerson) =>
+    !topic || (groupsByPerson[person.id] ?? []).includes(topic);
+  const matchesSearch = (person: BoardPerson) =>
+    !needle || person.name.toLowerCase().includes(needle);
 
   const base = flatGroup && view === 'flat' ? [flatGroup] : groups;
-  const shown = base.map(narrow).filter((group) => group.people.length > 0);
 
-  // The footer counts what's on screen, so filtering to a group tells you how
-  // many of that group are here rather than how many of everyone.
-  const everyone = new Set(shown.flatMap((group) => group.people.map((person) => person.id)));
-  const hereCount = [...everyone].filter((id) => present.has(id)).length;
+  // A pair whose men are all filtered out drops away rather than sitting
+  // there empty.
+  const shown = base
+    .map((group) => ({
+      ...group,
+      people: group.people.filter((person) => inTopic(person) && matchesSearch(person)),
+    }))
+    .filter((group) => group.people.length > 0);
+
+  const scope = new Set(
+    base.flatMap((group) => group.people.filter(inTopic).map((person) => person.id)),
+  );
+  const hereCount = [...scope].filter((id) => present.has(id)).length;
+
+  // Not worth a search box over a handful of names.
+  const showSearch =
+    new Set(base.flatMap((group) => group.people.map((person) => person.id))).size > 8;
 
   function apply(personId: string, shouldBePresent: boolean) {
     setPresent((current) => {
@@ -211,10 +224,23 @@ export function AttendanceBoard({
         </div>
       ) : null}
 
+      {showSearch ? (
+        <div className="px-4 pt-3">
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Find a name"
+            aria-label="Find a name"
+            className="w-full rounded-lg border border-hairline bg-surface px-3 py-2.5 text-[16px]"
+          />
+        </div>
+      ) : null}
+
       <div className="pb-14">
         {shown.length === 0 ? (
           <p className="px-5 pt-6 text-[15px] text-ink-secondary">
-            Nobody here is in that group.
+            {needle ? `Nobody matching “${search.trim()}”.` : 'Nobody here is in that group.'}
           </p>
         ) : null}
         {shown.map((group) => {
@@ -282,7 +308,7 @@ export function AttendanceBoard({
 
       <div className="fixed inset-x-0 bottom-[calc(3.25rem+env(safe-area-inset-bottom))] z-20 border-t border-hairline bg-canvas/95 backdrop-blur">
         <p className="mx-auto w-full max-w-[480px] px-4 py-3 text-[15px] font-medium">
-          {hereCount} of {everyone.size} here
+          {hereCount} of {scope.size} here
         </p>
       </div>
     </>
