@@ -65,7 +65,7 @@ export default async function TonightPage(props: PageProps<'/'>) {
       key: pair.id,
       title: pair.label ?? members.map((m) => m.name).join(' & '),
       people: members,
-      markAll: true,
+      isPair: true,
     });
   }
 

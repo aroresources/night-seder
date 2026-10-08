@@ -17,10 +17,13 @@ export interface BoardGroup {
   title: string | null;
   people: BoardPerson[];
   /**
-   * Offer a one-tap "mark both" on the heading. Only for real pairs: on a long
-   * list like "Not paired" it would be a mass-mark one stray tap away.
+   * A real pair, rather than a catch-all like "Not paired" or "Everyone".
+   *
+   * Pairs get a one-tap "mark both" on the heading — on a long list that
+   * would be a mass-mark one stray tap away — and a search that matches any
+   * man in a pair brings up his chavrusa with him, so both can be ticked.
    */
-  markAll?: boolean;
+  isPair?: boolean;
 }
 
 type View = 'pairs' | 'flat';
@@ -117,13 +120,22 @@ export function AttendanceBoard({
 
   const base = flatGroup && view === 'flat' ? [flatGroup] : groups;
 
-  // A pair whose men are all filtered out drops away rather than sitting
-  // there empty.
+  /*
+   * A pair whose men are all filtered out drops away rather than sitting there
+   * empty. Within a pair, a search matches the pair rather than the man: find
+   * one of them and his chavrusa comes up beside him, so both get ticked
+   * without searching twice. Anywhere else — "Not paired", "Everyone" — a
+   * search has to filter people, or finding one man would list all of them.
+   */
   const shown = base
-    .map((group) => ({
-      ...group,
-      people: group.people.filter((person) => inTopic(person) && matchesSearch(person)),
-    }))
+    .map((group) => {
+      const scoped = group.people.filter(inTopic);
+      if (!needle) return { ...group, people: scoped };
+      if (group.isPair) {
+        return { ...group, people: scoped.some(matchesSearch) ? scoped : [] };
+      }
+      return { ...group, people: scoped.filter(matchesSearch) };
+    })
     .filter((group) => group.people.length > 0);
 
   const scope = new Set(
@@ -254,7 +266,7 @@ export function AttendanceBoard({
                   <h2 className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink-secondary">
                     {group.title}
                   </h2>
-                  {group.markAll && group.people.length > 1 ? (
+                  {group.isPair && group.people.length > 1 ? (
                     <button
                       type="button"
                       onClick={() => toggleGroup(group)}
