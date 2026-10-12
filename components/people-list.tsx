@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 
 import type { Group, Person } from '@/lib/types';
 
-type Filter = 'all' | 'rabbi' | 'working' | 'daf' | 'paid' | 'inactive';
+type Filter = 'all' | 'rabbi' | 'working' | 'daf' | 'paid' | 'single' | 'married' | 'inactive';
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -13,6 +13,8 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'working', label: 'Working' },
   { value: 'daf', label: 'Daf' },
   { value: 'paid', label: 'Paid' },
+  { value: 'single', label: 'Single' },
+  { value: 'married', label: 'Married' },
   { value: 'inactive', label: 'Inactive' },
 ];
 
@@ -44,6 +46,11 @@ export function PeopleList({
           return person.in_daf && person.active;
         case 'paid':
           return person.gets_paid;
+        // Only men actually marked match. Nobody is assumed single.
+        case 'single':
+          return person.marital_status === 'single';
+        case 'married':
+          return person.marital_status === 'married';
         case 'inactive':
           return !person.active;
         default:

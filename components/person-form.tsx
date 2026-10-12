@@ -1,4 +1,4 @@
-import { today } from '@/lib/dates';
+import { ageOn, today } from '@/lib/dates';
 import { centsToInput } from '@/lib/money';
 import type { Group, Person } from '@/lib/types';
 
@@ -87,6 +87,48 @@ export function PersonForm({
               defaultValue={person?.email ?? ''}
               className={inputClasses}
             />
+          </label>
+
+          <div className="px-4 py-2.5">
+            <span className="mb-1 block text-[13px] text-ink-secondary">Single or married</span>
+            <div className="flex gap-2">
+              {(
+                [
+                  ['', 'Not said'],
+                  ['single', 'Single'],
+                  ['married', 'Married'],
+                ] as [string, string][]
+              ).map(([value, label]) => (
+                <label
+                  key={label}
+                  className="flex min-h-[2.75rem] flex-1 items-center justify-center gap-2 rounded-xl bg-canvas px-2 text-[15px] has-checked:bg-accent has-checked:text-on-accent"
+                >
+                  <input
+                    type="radio"
+                    name="marital_status"
+                    value={value}
+                    defaultChecked={(person?.marital_status ?? '') === value}
+                    className="sr-only"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <label className="block px-4 py-2.5">
+            <span className="mb-1 block text-[13px] text-ink-secondary">Birthday (optional)</span>
+            <input
+              type="date"
+              name="birthday"
+              defaultValue={person?.birthday ?? ''}
+              className={inputClasses}
+            />
+            {person?.birthday ? (
+              <span className="mt-1 block text-[13px] text-ink-tertiary">
+                {ageOn(person.birthday, today())} years old
+              </span>
+            ) : null}
           </label>
 
           <label className="block px-4 py-2.5">

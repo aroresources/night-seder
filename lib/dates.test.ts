@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   addDays,
+  ageOn,
   datesInRange,
   daysBetween,
   formatHeaderDate,
@@ -122,6 +123,29 @@ test('hebrewMonthYear names the month a payment period covers', () => {
 test('hebrewDate produces a Hebrew calendar year, not a civil one', () => {
   const formatted = hebrewDate('2026-09-17');
   assert.match(formatted, /5\d{3}/);
+});
+
+test('age turns over on the birthday, not before or after', () => {
+  assert.equal(ageOn('1987-06-15', '2026-06-14'), 38, 'the day before');
+  assert.equal(ageOn('1987-06-15', '2026-06-15'), 39, 'on the day');
+  assert.equal(ageOn('1987-06-15', '2026-06-16'), 39, 'the day after');
+});
+
+test('age is right either side of the turn of the year', () => {
+  assert.equal(ageOn('1990-12-31', '2026-01-01'), 35);
+  assert.equal(ageOn('1990-01-01', '2026-12-31'), 36);
+});
+
+test('a leap-day birthday turns on 1 March in a common year', () => {
+  assert.equal(ageOn('1988-02-29', '2026-02-28'), 37);
+  assert.equal(ageOn('1988-02-29', '2026-03-01'), 38);
+  // And on the day itself when the year does have one.
+  assert.equal(ageOn('1988-02-29', '2028-02-29'), 40);
+});
+
+test('age handles a birthday today and one not yet reached', () => {
+  assert.equal(ageOn('2026-10-12', '2026-10-12'), 0, 'born today');
+  assert.equal(ageOn('2027-01-01', '2026-10-12'), -1, 'a date in the future is not an age');
 });
 
 test('relativeDays reads from a fixed today', () => {

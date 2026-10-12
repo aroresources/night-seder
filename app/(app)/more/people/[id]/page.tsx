@@ -13,7 +13,7 @@ import {
   personStats,
   type PersonWindow,
 } from '@/lib/attendance';
-import { formatCompactDate, formatShortDate, minDate, today } from '@/lib/dates';
+import { ageOn, formatCompactDate, formatShortDate, minDate, today } from '@/lib/dates';
 import { formatCents } from '@/lib/money';
 import {
   getAllAttendance,
@@ -160,6 +160,22 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
               <span className="flex-1 text-[15px]">Groups</span>
               <span className="text-[15px] text-ink-secondary">
                 {myGroups.map((group) => group.name).join(', ')}
+              </span>
+            </Row>
+          ) : null}
+          {person.marital_status ? (
+            <Row>
+              <span className="flex-1 text-[15px]">Status</span>
+              <span className="text-[15px] text-ink-secondary">
+                {person.marital_status === 'married' ? 'Married' : 'Single'}
+              </span>
+            </Row>
+          ) : null}
+          {person.birthday ? (
+            <Row>
+              <span className="flex-1 text-[15px]">Age</span>
+              <span className="text-[15px] text-ink-secondary">
+                {ageOn(person.birthday, now)} · {formatShortDate(person.birthday)}
               </span>
             </Row>
           ) : null}

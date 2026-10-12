@@ -182,6 +182,23 @@ export function hebrewMonthYear(date: CalendarDate): string {
   }).format(toUtcMidnight(date));
 }
 
+/**
+ * Whole years from a birthday to a date, the way a person counts their age:
+ * you are 39 until the day your birthday comes round, then 40.
+ *
+ * Done on the calendar parts rather than by subtracting timestamps, so leap
+ * years and daylight saving can't shave a day off and age somebody early.
+ * A 29 February birthday turns on 1 March in a common year, which is the
+ * ordinary civil convention.
+ */
+export function ageOn(birthday: CalendarDate, onDate: CalendarDate): number {
+  const [birthYear, birthMonth, birthDay] = birthday.split('-').map(Number);
+  const [year, month, day] = onDate.split('-').map(Number);
+
+  const hadBirthday = month > birthMonth || (month === birthMonth && day >= birthDay);
+  return year - birthYear - (hadBirthday ? 0 : 1);
+}
+
 /** "3 days ago", "in 2 days", "today" — for last-contact and follow-up lines. */
 export function relativeDays(date: CalendarDate, from: CalendarDate): string {
   const diff = daysBetween(from, date);

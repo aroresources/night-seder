@@ -7,7 +7,7 @@ import { today } from '@/lib/dates';
 import { parseDollars } from '@/lib/money';
 import { parseFullName, type NameParts } from '@/lib/names';
 import { supabaseServer } from '@/lib/supabase/server';
-import type { Role } from '@/lib/types';
+import type { MaritalStatus, Role } from '@/lib/types';
 
 /** Which morning programme a person is being added to. */
 type MorningFlag = 'in_daf' | 'in_shachris';
@@ -27,6 +27,12 @@ function role(form: FormData): Role {
 /** An empty box means "no usual amount", not zero. */
 function monthlyAmount(form: FormData): number | null {
   return parseDollars(text(form, 'monthly_amount'));
+}
+
+/** Blank means nobody has said yet, which is not the same as single. */
+function maritalStatus(form: FormData): MaritalStatus | null {
+  const value = text(form, 'marital_status');
+  return value === 'single' || value === 'married' ? value : null;
 }
 
 /** The ticked group checkboxes. An empty list means "in no groups". */
@@ -56,6 +62,8 @@ export async function createPerson(form: FormData) {
     .insert({
       ...nameParts(form),
       email: optionalText(form, 'email'),
+      marital_status: maritalStatus(form),
+      birthday: optionalDate(form, 'birthday'),
       role: role(form),
       phone: optionalText(form, 'phone'),
       notes: optionalText(form, 'notes'),
@@ -114,6 +122,8 @@ export async function updatePerson(id: string, form: FormData) {
     .update({
       ...nameParts(form),
       email: optionalText(form, 'email'),
+      marital_status: maritalStatus(form),
+      birthday: optionalDate(form, 'birthday'),
       role: role(form),
       phone: optionalText(form, 'phone'),
       notes: optionalText(form, 'notes'),

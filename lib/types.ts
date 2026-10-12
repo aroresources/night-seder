@@ -8,6 +8,9 @@
 
 import type { CalendarDate } from './dates.ts';
 
+/** Null means nobody has said yet, which is not the same as single. */
+export type MaritalStatus = 'single' | 'married';
+
 export type Role = 'rabbi' | 'working';
 
 export type Channel = 'call' | 'text' | 'whatsapp' | 'email' | 'in_person';
@@ -38,6 +41,8 @@ export type Person = {
   role: Role;
   phone: string | null;
   email: string | null;
+  marital_status: MaritalStatus | null;
+  birthday: CalendarDate | null;
   notes: string | null;
   active: boolean;
   in_night_seder: boolean;
