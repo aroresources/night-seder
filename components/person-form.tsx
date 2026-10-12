@@ -1,6 +1,6 @@
 import { ageOn, today } from '@/lib/dates';
 import { centsToInput } from '@/lib/money';
-import type { Group, Person } from '@/lib/types';
+import { MARITAL_STATUSES, type Group, type Person } from '@/lib/types';
 
 import { Button, inputClasses } from './ui';
 
@@ -91,26 +91,22 @@ export function PersonForm({
 
           <div className="px-4 py-2.5">
             <span className="mb-1 block text-[13px] text-ink-secondary">Single or married</span>
-            <div className="flex gap-2">
-              {(
-                [
-                  ['', 'Not said'],
-                  ['single', 'Single'],
-                  ['married', 'Married'],
-                ] as [string, string][]
-              ).map(([value, label]) => (
+            {/* Wraps rather than squeezing: four of these don't fit one row
+                at phone width. */}
+            <div className="flex flex-wrap gap-2">
+              {MARITAL_STATUSES.map((option) => (
                 <label
-                  key={label}
-                  className="flex min-h-[2.75rem] flex-1 items-center justify-center gap-2 rounded-xl bg-canvas px-2 text-[15px] has-checked:bg-accent has-checked:text-on-accent"
+                  key={option.label}
+                  className="flex min-h-[2.75rem] min-w-[5.5rem] flex-1 items-center justify-center rounded-xl bg-canvas px-3 text-[15px] has-checked:bg-accent has-checked:text-on-accent"
                 >
                   <input
                     type="radio"
                     name="marital_status"
-                    value={value}
-                    defaultChecked={(person?.marital_status ?? '') === value}
+                    value={option.value}
+                    defaultChecked={(person?.marital_status ?? '') === option.value}
                     className="sr-only"
                   />
-                  {label}
+                  {option.label}
                 </label>
               ))}
             </div>

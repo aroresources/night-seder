@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 
 import type { Group, Person } from '@/lib/types';
 
-type Filter = 'all' | 'rabbi' | 'working' | 'daf' | 'paid' | 'single' | 'married' | 'inactive';
+type Filter = 'all' | 'rabbi' | 'working' | 'daf' | 'paid' | 'single' | 'married' | 'divorced' | 'inactive';
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -15,6 +15,7 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'paid', label: 'Paid' },
   { value: 'single', label: 'Single' },
   { value: 'married', label: 'Married' },
+  { value: 'divorced', label: 'Divorced' },
   { value: 'inactive', label: 'Inactive' },
 ];
 
@@ -51,6 +52,8 @@ export function PeopleList({
           return person.marital_status === 'single';
         case 'married':
           return person.marital_status === 'married';
+        case 'divorced':
+          return person.marital_status === 'divorced';
         case 'inactive':
           return !person.active;
         default:

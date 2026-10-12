@@ -32,7 +32,7 @@ function monthlyAmount(form: FormData): number | null {
 /** Blank means nobody has said yet, which is not the same as single. */
 function maritalStatus(form: FormData): MaritalStatus | null {
   const value = text(form, 'marital_status');
-  return value === 'single' || value === 'married' ? value : null;
+  return value === 'single' || value === 'married' || value === 'divorced' ? value : null;
 }
 
 /** The ticked group checkboxes. An empty list means "in no groups". */

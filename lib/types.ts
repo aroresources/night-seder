@@ -9,7 +9,18 @@
 import type { CalendarDate } from './dates.ts';
 
 /** Null means nobody has said yet, which is not the same as single. */
-export type MaritalStatus = 'single' | 'married';
+export type MaritalStatus = 'single' | 'married' | 'divorced';
+
+export const MARITAL_STATUSES: { value: '' | MaritalStatus; label: string }[] = [
+  { value: '', label: 'Not said' },
+  { value: 'single', label: 'Single' },
+  { value: 'married', label: 'Married' },
+  { value: 'divorced', label: 'Divorced' },
+];
+
+export function maritalLabel(status: MaritalStatus): string {
+  return MARITAL_STATUSES.find((s) => s.value === status)?.label ?? status;
+}
 
 export type Role = 'rabbi' | 'working';
 

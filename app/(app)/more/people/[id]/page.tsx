@@ -14,6 +14,7 @@ import {
   type PersonWindow,
 } from '@/lib/attendance';
 import { ageOn, formatCompactDate, formatShortDate, minDate, today } from '@/lib/dates';
+import { maritalLabel } from '@/lib/types';
 import { formatCents } from '@/lib/money';
 import {
   getAllAttendance,
@@ -167,7 +168,7 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
             <Row>
               <span className="flex-1 text-[15px]">Status</span>
               <span className="text-[15px] text-ink-secondary">
-                {person.marital_status === 'married' ? 'Married' : 'Single'}
+                {maritalLabel(person.marital_status)}
               </span>
             </Row>
           ) : null}
