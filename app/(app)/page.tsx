@@ -4,6 +4,7 @@ import { makeNightADayOff } from '@/app/actions/schedule';
 import { AttendanceBoard, type BoardGroup } from '@/components/attendance-board';
 import { DateHeader } from '@/components/date-header';
 import { DayOffButton } from '@/components/day-off-button';
+import { PairBuilder } from '@/components/pair-builder';
 import { Banner, ButtonLink, Empty } from '@/components/ui';
 import { nightScheduleStatus, notRecordedDates, scheduledNights } from '@/lib/attendance';
 import { hebrewDateForNight, isCalendarDate, today, withinWindow } from '@/lib/dates';
@@ -73,6 +74,19 @@ export default async function TonightPage(props: PageProps<'/'>) {
   if (zman && unpaired.length > 0) {
     groups.push({ key: 'not-paired', title: 'Not paired', people: unpaired });
   }
+
+  // Whoever could be put in a pair tonight. "Already paired" is judged against
+  // every pair in the zman, not just the men showing on this date, so somebody
+  // outside his membership window still reads as paired.
+  const everyonePaired = new Set(pairs.flatMap((pair) => pair.members.map((m) => m.person_id)));
+  const pickable = people
+    .filter((person) => person.active && person.in_night_seder)
+    .map((person) => ({
+      id: person.id,
+      name: person.name,
+      role: person.role,
+      paired: everyonePaired.has(person.id),
+    }));
   if (!zman) {
     groups.push({ key: 'everyone', title: 'Everyone', people: eligible });
   }
@@ -136,6 +150,10 @@ export default async function TonightPage(props: PageProps<'/'>) {
             .
           </p>
         ) : null}
+
+        {/* Pairing up happens in the room, so it belongs here and not only on
+            the zman's page. Needs a zman: a pair belongs to one. */}
+        {zman ? <PairBuilder zmanId={zman.id} people={pickable} /> : null}
 
         {eligible.length === 0 ? (
           <Empty
