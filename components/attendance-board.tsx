@@ -103,6 +103,14 @@ export function AttendanceBoard({
   const [present, setPresent] = useState<ReadonlySet<string>>(() => new Set(initialPresent));
   const [topic, setTopic] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  /*
+   * "Not here yet", held as the men who weren't here at the moment it was
+   * switched on rather than as a live condition. Marking somebody then leaves
+   * him on screen, turning indigo where he already was, instead of vanishing
+   * and sliding every row below him up under your thumb. Switch it off and on
+   * to narrow it again.
+   */
+  const [pending, setPending] = useState<ReadonlySet<string> | null>(null);
   const view = useSyncExternalStore(subscribeToView, readView, serverView);
   const queues = useRef(new Map<string, Promise<unknown>>());
 
@@ -129,7 +137,9 @@ export function AttendanceBoard({
    */
   const shown = base
     .map((group) => {
-      const scoped = group.people.filter(inTopic);
+      const scoped = group.people.filter(
+        (person) => inTopic(person) && (!pending || pending.has(person.id)),
+      );
       if (!needle) return { ...group, people: scoped };
       if (group.isPair) {
         return { ...group, people: scoped.some(matchesSearch) ? scoped : [] };
@@ -142,6 +152,13 @@ export function AttendanceBoard({
     base.flatMap((group) => group.people.filter(inTopic).map((person) => person.id)),
   );
   const hereCount = [...scope].filter((id) => present.has(id)).length;
+
+  /** How many of the men it is showing are still not marked. */
+  const stillMissing = pending ? [...pending].filter((id) => !present.has(id)).length : 0;
+
+  function togglePending() {
+    setPending(pending ? null : new Set([...scope].filter((id) => !present.has(id))));
+  }
 
   // Not worth a search box over a handful of names.
   const showSearch =
@@ -218,6 +235,19 @@ export function AttendanceBoard({
         </div>
       ) : null}
 
+      <div className="px-4 pt-3">
+        <button
+          type="button"
+          onClick={togglePending}
+          aria-pressed={pending !== null}
+          className={`min-h-[2.25rem] rounded-full px-3 text-[15px] ${
+            pending !== null ? 'bg-accent text-on-accent' : 'bg-surface text-ink-secondary'
+          }`}
+        >
+          {pending !== null ? `Not here yet · ${stillMissing}` : 'Not here yet'}
+        </button>
+      </div>
+
       {topicGroups.length > 0 ? (
         <div className="flex gap-2 overflow-x-auto px-4 pt-3">
           {topicGroups.map((option) => (
@@ -252,7 +282,11 @@ export function AttendanceBoard({
       <div className="pb-14">
         {shown.length === 0 ? (
           <p className="px-5 pt-6 text-[15px] text-ink-secondary">
-            {needle ? `Nobody matching “${search.trim()}”.` : 'Nobody here is in that group.'}
+            {needle
+              ? `Nobody matching “${search.trim()}”.`
+              : pending
+                ? 'Everybody is here.'
+                : 'Nobody here is in that group.'}
           </p>
         ) : null}
         {shown.map((group) => {
