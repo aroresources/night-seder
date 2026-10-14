@@ -211,7 +211,15 @@ export default async function ReportsPage(props: PageProps<'/reports'>) {
     : [];
   const nightRows = zman
     ? buildRows(
-        people,
+        // Men in night seder, plus anyone who turned up to it without being in
+        // it. Without this every man whose membership window covers the zman
+        // lands in the report at 0%, including the Daf-only ones — being
+        // expected somewhere is about the programme, not just the dates.
+        people.filter(
+          (person) =>
+            person.in_night_seder ||
+            nightAttendance.some((row) => row.person_id === person.id),
+        ),
         nightHeld,
         nightAttendance,
         settings.night_absence_threshold,
