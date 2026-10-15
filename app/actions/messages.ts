@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { composeBody } from '@/lib/message-text';
 import { toE164 } from '@/lib/phone';
 import { OPTED_OUT, sendSms, smsConfigured } from '@/lib/sms';
 import { supabaseServer } from '@/lib/supabase/server';
@@ -45,8 +46,10 @@ function pickRecipients(people: Person[], audience: string, groupIds: Set<string
  * and recording it there would reset every man's "last contact" to today.
  */
 export async function sendBroadcast(form: FormData): Promise<SendOutcome> {
-  const body = text(form, 'body').trim();
-  if (!body) throw new Error('Write a message first');
+  const typed = text(form, 'body').trim();
+  if (!typed) throw new Error('Write a message first');
+  // Appended here as well as previewed, so what is stored is what was sent.
+  const body = composeBody(typed, text(form, 'opt_out_line') !== 'off');
   if (!smsConfigured()) throw new Error('Texting is not set up yet — add the Twilio keys first');
 
   const audience = text(form, 'audience') || 'all';

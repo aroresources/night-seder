@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
 
 import { sendBroadcast, type SendOutcome } from '@/app/actions/messages';
+import { composeBody, measure } from '@/lib/message-text';
 import { isSendable } from '@/lib/phone';
 import type { Group } from '@/lib/types';
 
@@ -21,9 +22,6 @@ export interface Recipient {
   groupIds: string[];
 }
 
-/** A text is 160 characters; past that it is billed as more than one. */
-const SEGMENT = 160;
-
 export function MessageComposer({
   recipients,
   groups,
@@ -37,6 +35,7 @@ export function MessageComposer({
   const [audience, setAudience] = useState('night');
   const [groupId, setGroupId] = useState(groups[0]?.id ?? '');
   const [body, setBody] = useState('');
+  const [optOutLine, setOptOutLine] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [outcome, setOutcome] = useState<SendOutcome | null>(null);
   const [pending, startTransition] = useTransition();
@@ -61,10 +60,15 @@ export function MessageComposer({
   }, [recipients, audience, groupId]);
 
   const willReceive = chosen.filter((p) => !p.optedOut && isSendable(p.phone));
-  const noNumber = chosen.filter((p) => !p.optedOut && !isSendable(p.phone));
   const optedOut = chosen.filter((p) => p.optedOut);
+  // Worth telling apart: one is data to collect, the other is a number to fix.
+  const noNumber = chosen.filter((p) => !p.optedOut && !p.phone?.trim());
+  const unreadable = chosen.filter(
+    (p) => !p.optedOut && Boolean(p.phone?.trim()) && !isSendable(p.phone),
+  );
 
-  const segments = body.length === 0 ? 0 : Math.ceil(body.length / SEGMENT);
+  const outgoing = composeBody(body, optOutLine);
+  const cost = measure(outgoing);
   const audienceLabel =
     audience === 'group'
       ? (groups.find((g) => g.id === groupId)?.name ?? 'Group')
@@ -79,6 +83,7 @@ export function MessageComposer({
   function send() {
     const form = new FormData();
     form.set('body', body);
+    form.set('opt_out_line', optOutLine ? 'on' : 'off');
     form.set('audience', audience);
     form.set('group_id', groupId);
     form.set('audience_label', audienceLabel);
@@ -193,10 +198,30 @@ export function MessageComposer({
             className={inputClasses}
           />
           <span className="mt-1 block text-[13px] text-ink-tertiary">
-            {body.length} characters
-            {segments > 1 ? ` · ${segments} texts each, so ${segments}× the cost` : ''}
+            {cost.characters} characters · {cost.remaining} left in this text
+            {cost.segments > 1 ? ` · ${cost.segments} texts each, so ${cost.segments}× the cost` : ''}
+            {cost.encoding === 'UCS-2'
+              ? ' · a special character cut this to 70 per text — a curly quote or an accent will do it'
+              : ''}
           </span>
         </label>
+
+        <label className="flex min-h-[2.75rem] items-center gap-3">
+          <input
+            type="checkbox"
+            checked={optOutLine}
+            onChange={(event) => setOptOutLine(event.target.checked)}
+            className="h-5 w-5 accent-[var(--accent)]"
+          />
+          <span className="text-[15px]">Add &ldquo;Reply STOP to stop&rdquo;</span>
+        </label>
+
+        {body.trim() !== '' ? (
+          <div className="rounded-lg bg-canvas px-3 py-2">
+            <p className="mb-1 text-[13px] text-ink-secondary">They will see</p>
+            <p className="text-[15px] whitespace-pre-wrap">{outgoing}</p>
+          </div>
+        ) : null}
 
         <div className="rounded-lg bg-canvas px-3 py-2 text-[13px] text-ink-secondary">
           <p className="text-[15px] text-ink">
@@ -204,7 +229,14 @@ export function MessageComposer({
           </p>
           {noNumber.length > 0 ? (
             <p className="mt-1">
-              {noNumber.length} skipped, no usable number: {noNumber.map((p) => p.name).join(', ')}
+              {noNumber.length} have no phone number at all
+              {noNumber.length <= 12 ? `: ${noNumber.map((p) => p.name).join(', ')}` : ''}
+            </p>
+          ) : null}
+          {unreadable.length > 0 ? (
+            <p className="mt-1">
+              {unreadable.length} have a number I can&apos;t read:{' '}
+              {unreadable.map((p) => `${p.name} (${p.phone})`).join(', ')}
             </p>
           ) : null}
           {optedOut.length > 0 ? (
