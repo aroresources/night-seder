@@ -19,8 +19,8 @@ export interface NameParts {
 
 /**
  * Split a pasted line into parts: the first word is the first name, the last
- * word is the surname, and anything between is the middle. One word is just a
- * first name.
+ * word is the surname, and anything between is the middle. One word on its own
+ * is taken as a surname, since that is the part a person must have.
  *
  * This is a guess, and it is wrong for some names — a two-word surname lands
  * in the middle. It is only used for bulk paste, where the alternative is
