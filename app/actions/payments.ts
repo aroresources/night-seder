@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import { today } from '@/lib/dates';
 import { parseDollars } from '@/lib/money';
 import { supabaseServer } from '@/lib/supabase/server';
-import type { PaymentMethod } from '@/lib/types';
+import { PAYMENT_METHODS, type PaymentMethod } from '@/lib/types';
 
 import { date, optionalText, text } from './form';
 
@@ -14,11 +14,17 @@ function refresh() {
   revalidatePath('/', 'layout');
 }
 
-const METHODS: PaymentMethod[] = ['cash', 'check', 'transfer', 'other'];
-
+/**
+ * Taken from the one list the form is built from, rather than a second copy
+ * kept in step by hand. It used to fall back to cash when it didn't recognise
+ * the value, which meant adding a method here would have quietly recorded
+ * those payments as cash — wrong, and invisible.
+ */
 function method(form: FormData): PaymentMethod {
   const value = text(form, 'method');
-  return METHODS.find((m) => m === value) ?? 'cash';
+  const match = PAYMENT_METHODS.find((m) => m.value === value);
+  if (!match) throw new Error('Pick how it was paid');
+  return match.value;
 }
 
 function amount(form: FormData): number {

@@ -162,11 +162,12 @@ export type MessageRecipient = {
   error: string | null;
 };
 
-export type PaymentMethod = 'cash' | 'check' | 'transfer' | 'other';
+export type PaymentMethod = 'cash' | 'check' | 'zelle' | 'transfer' | 'other';
 
 export const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
   { value: 'cash', label: 'Cash' },
   { value: 'check', label: 'Check' },
+  { value: 'zelle', label: 'Zelle' },
   { value: 'transfer', label: 'Transfer' },
   { value: 'other', label: 'Other' },
 ];
