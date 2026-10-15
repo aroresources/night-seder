@@ -53,6 +53,8 @@ export type Person = {
   phone: string | null;
   email: string | null;
   marital_status: MaritalStatus | null;
+  /** He replied STOP. Set by the app when Twilio says so; never guessed. */
+  sms_opt_out: boolean;
   birthday: CalendarDate | null;
   notes: string | null;
   active: boolean;
@@ -142,6 +144,24 @@ export type PersonGroup = {
   group_id: string;
 };
 
+/** One broadcast: the words, sent once to many. */
+export type Message = {
+  id: string;
+  created_at: string;
+  body: string;
+  audience: string | null;
+};
+
+export type MessageRecipient = {
+  id: string;
+  created_at: string;
+  message_id: string;
+  person_id: string;
+  phone: string | null;
+  status: 'sent' | 'failed' | 'skipped';
+  error: string | null;
+};
+
 export type PaymentMethod = 'cash' | 'check' | 'transfer' | 'other';
 
 export const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [
@@ -214,6 +234,8 @@ export type Database = {
       shachris_days_off: TableDef<DafDayOff, 'date'>;
       correspondence: TableDef<Correspondence, 'person_id' | 'channel'>;
       groups: TableDef<Group, 'name'>;
+      messages: TableDef<Message, 'body'>;
+      message_recipients: TableDef<MessageRecipient, 'message_id' | 'person_id' | 'status'>;
       person_groups: TableDef<PersonGroup, 'person_id' | 'group_id'>;
       payment_periods: TableDef<PaymentPeriod, 'name' | 'start_date'>;
       payments: TableDef<Payment, 'period_id' | 'person_id' | 'amount_cents' | 'method'>;

@@ -10,6 +10,8 @@ import type {
   Correspondence,
   DafDayOff,
   Group,
+  Message,
+  MessageRecipient,
   Pair,
   PairMember,
   Payment,
@@ -201,6 +203,63 @@ export async function getGroupMembership(): Promise<Map<string, string[]>> {
     else byPerson.set(row.person_id, [row.group_id]);
   }
   return byPerson;
+}
+
+// Messages ---------------------------------------------------------------
+
+export interface MessageSummary {
+  message: Message;
+  sent: number;
+  failed: number;
+  skipped: number;
+}
+
+/** Sent messages, newest first, with how each one went. */
+export async function getMessages(): Promise<MessageSummary[]> {
+  const supabase = await supabaseServer();
+  const messages = unwrap(
+    await supabase.from('messages').select('*').order('created_at', { ascending: false }).limit(50),
+  );
+  if (messages.length === 0) return [];
+
+  const rows = unwrap(
+    await supabase
+      .from('message_recipients')
+      .select('*')
+      .in(
+        'message_id',
+        messages.map((m) => m.id),
+      ),
+  );
+
+  return messages.map((message) => {
+    const mine = rows.filter((row) => row.message_id === message.id);
+    return {
+      message,
+      sent: mine.filter((r) => r.status === 'sent').length,
+      failed: mine.filter((r) => r.status === 'failed').length,
+      skipped: mine.filter((r) => r.status === 'skipped').length,
+    };
+  });
+}
+
+/** One message with what happened to each man it was sent to. */
+export async function getMessage(
+  id: string,
+): Promise<{ message: Message; recipients: MessageRecipient[] } | null> {
+  const supabase = await supabaseServer();
+  const { data: message, error } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!message) return null;
+
+  const recipients = unwrap(
+    await supabase.from('message_recipients').select('*').eq('message_id', id),
+  );
+  return { message, recipients };
 }
 
 // Payments ---------------------------------------------------------------
