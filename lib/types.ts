@@ -41,9 +41,10 @@ export function channelLabel(channel: Channel): string {
 export type Person = {
   id: string;
   created_at: string;
-  first_name: string;
+  /** Optional: the surname is the part that must be there. */
+  first_name: string | null;
   middle_name: string | null;
-  last_name: string | null;
+  last_name: string;
   /**
    * The three parts joined up. The database generates this, so it can never
    * drift from them — never write to it.
@@ -52,6 +53,7 @@ export type Person = {
   role: Role;
   phone: string | null;
   email: string | null;
+  address: string | null;
   marital_status: MaritalStatus | null;
   /** He replied STOP. Set by the app when Twilio says so; never guessed. */
   sms_opt_out: boolean;
@@ -223,7 +225,7 @@ type TableDef<
 export type Database = {
   public: {
     Tables: {
-      people: TableDef<Person, 'first_name' | 'role', 'name'>;
+      people: TableDef<Person, 'last_name' | 'role', 'name'>;
       zmanim: TableDef<Zman, 'name' | 'start_date' | 'end_date'>;
       zman_days_off: TableDef<ZmanDayOff, 'zman_id' | 'date'>;
       pairs: TableDef<Pair, 'zman_id'>;

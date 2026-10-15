@@ -25,11 +25,11 @@ export function PersonForm({
       <section className="px-4 pt-4">
         <div className="divide-hairline overflow-hidden rounded-xl bg-surface">
           <label className="block px-4 py-2.5">
-            <span className="mb-1 block text-[13px] text-ink-secondary">First name</span>
+            <span className="mb-1 block text-[13px] text-ink-secondary">
+              First name (optional)
+            </span>
             <input
               name="first_name"
-              required
-              autoFocus={!person}
               defaultValue={person?.first_name ?? ''}
               className={inputClasses}
             />
@@ -47,11 +47,11 @@ export function PersonForm({
           </label>
 
           <label className="block px-4 py-2.5">
-            <span className="mb-1 block text-[13px] text-ink-secondary">
-              Last name (optional)
-            </span>
+            <span className="mb-1 block text-[13px] text-ink-secondary">Last name</span>
             <input
               name="last_name"
+              required
+              autoFocus={!person}
               defaultValue={person?.last_name ?? ''}
               className={inputClasses}
             />
@@ -125,6 +125,16 @@ export function PersonForm({
                 {ageOn(person.birthday, today())} years old
               </span>
             ) : null}
+          </label>
+
+          <label className="block px-4 py-2.5">
+            <span className="mb-1 block text-[13px] text-ink-secondary">Address (optional)</span>
+            <textarea
+              name="address"
+              rows={2}
+              defaultValue={person?.address ?? ''}
+              className={inputClasses}
+            />
           </label>
 
           <label className="block px-4 py-2.5">

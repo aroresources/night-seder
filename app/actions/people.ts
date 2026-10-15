@@ -45,12 +45,12 @@ function groupIds(form: FormData): string[] {
  * into the display name, so nothing here writes `name` itself.
  */
 function nameParts(form: FormData): NameParts {
-  const first_name = text(form, 'first_name');
-  if (!first_name) throw new Error('A first name is required');
+  const last_name = text(form, 'last_name');
+  if (!last_name) throw new Error('A last name is required');
   return {
-    first_name,
+    first_name: optionalText(form, 'first_name'),
     middle_name: optionalText(form, 'middle_name'),
-    last_name: optionalText(form, 'last_name'),
+    last_name,
   };
 }
 
@@ -62,6 +62,7 @@ export async function createPerson(form: FormData) {
     .insert({
       ...nameParts(form),
       email: optionalText(form, 'email'),
+      address: optionalText(form, 'address'),
       marital_status: maritalStatus(form),
       birthday: optionalDate(form, 'birthday'),
       role: role(form),
@@ -122,6 +123,7 @@ export async function updatePerson(id: string, form: FormData) {
     .update({
       ...nameParts(form),
       email: optionalText(form, 'email'),
+      address: optionalText(form, 'address'),
       marital_status: maritalStatus(form),
       birthday: optionalDate(form, 'birthday'),
       role: role(form),

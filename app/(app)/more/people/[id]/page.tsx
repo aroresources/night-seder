@@ -198,6 +198,14 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
               </a>
             </Row>
           ) : null}
+          {person.address ? (
+            <Row>
+              <span className="flex-1 text-[15px]">Address</span>
+              <span className="max-w-[60%] text-right text-[15px] whitespace-pre-wrap text-ink-secondary">
+                {person.address}
+              </span>
+            </Row>
+          ) : null}
           {person.email ? (
             <Row>
               <span className="flex-1 text-[15px]">Email</span>

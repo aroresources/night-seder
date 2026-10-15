@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { compareByName, fullName, nameSortKey, parseFullName } from './names.ts';
 
-const person = (first: string, last: string | null = null, middle: string | null = null) => ({
+const person = (first: string | null, last: string, middle: string | null = null) => ({
   first_name: first,
   middle_name: middle,
   last_name: last,
@@ -30,17 +30,24 @@ test('brothers are separated by their first names', () => {
   );
 });
 
-test('a man with no surname sorts under his first name, not at the bottom', () => {
-  const people = [person('Zalman', 'Adler'), person('Mendel'), person('Shimon', 'Zilber')];
+test('a man with no given name sorts by his surname like everyone else', () => {
+  const people = [person('Zalman', 'Adler'), person(null, 'Mendel'), person('Shimon', 'Zilber')];
   assert.deepEqual(
     [...people].sort(compareByName).map(fullName),
     ['Zalman Adler', 'Mendel', 'Shimon Zilber'],
   );
 });
 
+test('among namesakes, the one with no given name comes first', () => {
+  const people = [person('Dovid', 'Cohen'), person(null, 'Cohen'), person('Avi', 'Cohen')];
+  assert.deepEqual(
+    [...people].sort(compareByName).map(fullName),
+    ['Cohen', 'Avi Cohen', 'Dovid Cohen'],
+  );
+});
+
 test('sorting ignores case and stray spacing', () => {
   assert.equal(nameSortKey(person('edon', 'freiner')), nameSortKey(person('Edon', ' Freiner ')));
-  assert.equal(nameSortKey(person('Mendel', '  ')), nameSortKey(person('Mendel', null)));
 });
 
 test('the middle name has no say in the order', () => {
@@ -50,11 +57,11 @@ test('the middle name has no say in the order', () => {
   );
 });
 
-test('one word is a first name and nothing else', () => {
-  assert.deepEqual(parseFullName('Dovid'), {
-    first_name: 'Dovid',
+test('one word is a surname, since that is the part that is required', () => {
+  assert.deepEqual(parseFullName('Cohen'), {
+    first_name: null,
     middle_name: null,
-    last_name: null,
+    last_name: 'Cohen',
   });
 });
 
@@ -102,7 +109,7 @@ test('a blank line is not a person', () => {
 });
 
 test('fullName reassembles exactly what was split', () => {
-  for (const line of ['Dovid', 'Dovid Cohen', 'Moshe Chaim Yosef Levy']) {
+  for (const line of ['Cohen', 'Dovid Cohen', 'Moshe Chaim Yosef Levy']) {
     const parts = parseFullName(line);
     assert.ok(parts);
     assert.equal(fullName(parts), line);
@@ -119,7 +126,7 @@ test('fullName skips the parts that are missing or blank', () => {
     'Dovid Cohen',
   );
   assert.equal(
-    fullName({ first_name: 'Dovid', middle_name: null, last_name: null }),
-    'Dovid',
+    fullName({ first_name: null, middle_name: null, last_name: 'Cohen' }),
+    'Cohen',
   );
 });
