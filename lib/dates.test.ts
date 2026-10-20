@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  formatDateRange,
   addDays,
   ageOn,
   datesInRange,
@@ -154,4 +155,16 @@ test('relativeDays reads from a fixed today', () => {
   assert.equal(relativeDays('2026-09-18', '2026-09-17'), 'tomorrow');
   assert.equal(relativeDays('2026-09-10', '2026-09-17'), '7 days ago');
   assert.equal(relativeDays('2026-09-24', '2026-09-17'), 'in 7 days');
+});
+
+test('a date range says the year once when both ends share it', () => {
+  assert.equal(formatDateRange('2026-09-12', '2026-10-11'), 'Sep 12 – Oct 11, 2026');
+});
+
+test('a date range that crosses New Year says both years', () => {
+  assert.equal(formatDateRange('2026-12-10', '2027-01-08'), 'Dec 10, 2026 – Jan 8, 2027');
+});
+
+test('a period of one day is just that day', () => {
+  assert.equal(formatDateRange('2026-10-05', '2026-10-05'), 'Oct 5, 2026');
 });

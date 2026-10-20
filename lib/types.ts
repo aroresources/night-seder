@@ -189,6 +189,8 @@ export type PaymentPeriod = {
   created_at: string;
   name: string;
   start_date: CalendarDate;
+  /** The last day of the period, included in it. Never before the start. */
+  end_date: CalendarDate;
   note: string | null;
 };
 
@@ -245,7 +247,7 @@ export type Database = {
       messages: TableDef<Message, 'body'>;
       message_recipients: TableDef<MessageRecipient, 'message_id' | 'person_id' | 'status'>;
       person_groups: TableDef<PersonGroup, 'person_id' | 'group_id'>;
-      payment_periods: TableDef<PaymentPeriod, 'name' | 'start_date'>;
+      payment_periods: TableDef<PaymentPeriod, 'name' | 'start_date' | 'end_date'>;
       payments: TableDef<Payment, 'period_id' | 'person_id' | 'amount_cents' | 'method'>;
       settings: TableDef<Settings, 'id'>;
     };

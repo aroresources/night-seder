@@ -33,6 +33,17 @@ function amount(form: FormData): number {
   return cents;
 }
 
+/**
+ * The two ends of a period. A period that finishes before it starts is a typo,
+ * and left alone it would quietly report nothing.
+ */
+function span(form: FormData): { start_date: string; end_date: string } {
+  const start_date = date(form, 'start_date');
+  const end_date = date(form, 'end_date');
+  if (end_date < start_date) throw new Error('The period ends before it starts');
+  return { start_date, end_date };
+}
+
 // Periods ----------------------------------------------------------------
 
 export async function createPaymentPeriod(form: FormData) {
@@ -44,7 +55,7 @@ export async function createPaymentPeriod(form: FormData) {
     .from('payment_periods')
     .insert({
       name,
-      start_date: date(form, 'start_date'),
+      ...span(form),
       note: optionalText(form, 'note'),
     })
     .select('id')
@@ -64,7 +75,7 @@ export async function updatePaymentPeriod(id: string, form: FormData) {
     .from('payment_periods')
     .update({
       name,
-      start_date: date(form, 'start_date'),
+      ...span(form),
       note: optionalText(form, 'note'),
     })
     .eq('id', id);

@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 import { AddPeriodForm } from '@/components/add-period-form';
 import { Empty, ScreenHeader } from '@/components/ui';
-import { formatShortDate } from '@/lib/dates';
+import { formatDateRange } from '@/lib/dates';
 import { formatCents } from '@/lib/money';
 import { getPaymentPeriods, getPayments, getPeople } from '@/lib/queries';
 
@@ -61,7 +61,7 @@ export default async function PaymentsPage() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[17px]">{period.name}</p>
                       <p className="truncate text-[13px] text-ink-secondary">
-                        {formatShortDate(period.start_date)}
+                        {formatDateRange(period.start_date, period.end_date)}
                         {period.note ? ` · ${period.note}` : ''}
                       </p>
                     </div>

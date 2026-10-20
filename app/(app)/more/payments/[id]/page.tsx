@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { deletePaymentPeriod, updatePaymentPeriod } from '@/app/actions/payments';
 import { PaymentBoard, type PaymentPersonRow } from '@/components/payment-board';
 import { Button, Group, ScreenHeader, inputClasses } from '@/components/ui';
-import { formatShortDate } from '@/lib/dates';
+import { formatDateRange } from '@/lib/dates';
 import { formatCents } from '@/lib/money';
 import { getPaymentPeriod, getPayments, getPeople } from '@/lib/queries';
 
@@ -45,7 +45,7 @@ export default async function PaymentPeriodPage(props: PageProps<'/more/payments
     <>
       <ScreenHeader
         title={period.name}
-        subtitle={`${formatCents(totalPaid)} of ${formatCents(totalExpected)} · ${formatShortDate(period.start_date)}`}
+        subtitle={`${formatCents(totalPaid)} of ${formatCents(totalExpected)} · ${formatDateRange(period.start_date, period.end_date)}`}
         action={
           <Link href="/more/payments" className="text-[17px] text-accent">
             Payments
@@ -68,16 +68,28 @@ export default async function PaymentPeriodPage(props: PageProps<'/more/payments
               <span className="mb-1 block text-[13px] text-ink-secondary">Name</span>
               <input name="name" defaultValue={period.name} required className={inputClasses} />
             </label>
-            <label className="block">
-              <span className="mb-1 block text-[13px] text-ink-secondary">A date in the month</span>
-              <input
-                type="date"
-                name="start_date"
-                defaultValue={period.start_date}
-                required
-                className={inputClasses}
-              />
-            </label>
+            <div className="flex gap-3">
+              <label className="min-w-0 flex-1">
+                <span className="mb-1 block text-[13px] text-ink-secondary">Starts</span>
+                <input
+                  type="date"
+                  name="start_date"
+                  defaultValue={period.start_date}
+                  required
+                  className={inputClasses}
+                />
+              </label>
+              <label className="min-w-0 flex-1">
+                <span className="mb-1 block text-[13px] text-ink-secondary">Ends</span>
+                <input
+                  type="date"
+                  name="end_date"
+                  defaultValue={period.end_date}
+                  required
+                  className={inputClasses}
+                />
+              </label>
+            </div>
             <label className="block">
               <span className="mb-1 block text-[13px] text-ink-secondary">Note (optional)</span>
               <input name="note" defaultValue={period.note ?? ''} className={inputClasses} />

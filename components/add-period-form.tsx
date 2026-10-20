@@ -8,12 +8,13 @@ import { hebrewMonthYear, today } from '@/lib/dates';
 import { Button, inputClasses } from './ui';
 
 /**
- * Adding a period. Pick any date inside the month and the name fills itself in
- * from the Hebrew calendar — "Tishri 5787" — which is what you'd have typed.
- * Still editable, because a period isn't always a clean month.
+ * Adding a period. The name fills itself in from the Hebrew calendar for
+ * whichever month the start date falls in — "Tishri 5787" — which is what
+ * you'd have typed. Still editable, because a period isn't always a month.
  */
 export function AddPeriodForm() {
   const [startDate, setStartDate] = useState(today());
+  const [endDate, setEndDate] = useState('');
   const [name, setName] = useState(hebrewMonthYear(today()));
   const [touchedName, setTouchedName] = useState(false);
 
@@ -25,17 +26,32 @@ export function AddPeriodForm() {
   return (
     <form action={createPaymentPeriod} className="px-4 pt-4">
       <div className="flex flex-col gap-3 rounded-xl bg-surface p-4">
-        <label className="block">
-          <span className="mb-1 block text-[13px] text-ink-secondary">A date in the month</span>
-          <input
-            type="date"
-            name="start_date"
-            value={startDate}
-            onChange={(event) => changeDate(event.target.value)}
-            required
-            className={inputClasses}
-          />
-        </label>
+        <div className="flex gap-3">
+          <label className="min-w-0 flex-1">
+            <span className="mb-1 block text-[13px] text-ink-secondary">Starts</span>
+            <input
+              type="date"
+              name="start_date"
+              value={startDate}
+              onChange={(event) => changeDate(event.target.value)}
+              required
+              className={inputClasses}
+            />
+          </label>
+
+          <label className="min-w-0 flex-1">
+            <span className="mb-1 block text-[13px] text-ink-secondary">Ends</span>
+            <input
+              type="date"
+              name="end_date"
+              value={endDate}
+              min={startDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              required
+              className={inputClasses}
+            />
+          </label>
+        </div>
 
         <label className="block">
           <span className="mb-1 block text-[13px] text-ink-secondary">Name</span>

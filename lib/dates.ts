@@ -139,6 +139,28 @@ export function formatShortDate(date: CalendarDate): string {
   }).format(toUtcMidnight(date));
 }
 
+/**
+ * "Sep 12 – Oct 11, 2026" — the two ends of a period, said once.
+ *
+ * The year appears once when both ends share it, and on both when they don't,
+ * so a period running over New Year reads properly. A period of one day is
+ * just that day.
+ */
+export function formatDateRange(start: CalendarDate, end: CalendarDate): string {
+  if (start === end) return formatShortDate(start);
+
+  const sameYear = start.slice(0, 4) === end.slice(0, 4);
+  const from = sameYear
+    ? new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        timeZone: 'UTC',
+      }).format(toUtcMidnight(start))
+    : formatShortDate(start);
+
+  return `${from} – ${formatShortDate(end)}`;
+}
+
 /** "Wed, Sep 17" — compact, for dense rows. */
 export function formatCompactDate(date: CalendarDate): string {
   return new Intl.DateTimeFormat('en-US', {
