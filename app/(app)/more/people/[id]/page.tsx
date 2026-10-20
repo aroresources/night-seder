@@ -14,7 +14,7 @@ import {
   type PersonWindow,
 } from '@/lib/attendance';
 import { ageOn, formatCompactDate, formatShortDate, minDate, today } from '@/lib/dates';
-import { maritalLabel } from '@/lib/types';
+import { maritalLabel, paymentMethodLabel } from '@/lib/types';
 import { formatCents } from '@/lib/money';
 import {
   getAllAttendance,
@@ -153,6 +153,9 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
                 {person.monthly_amount_cents != null
                   ? `${formatCents(person.monthly_amount_cents)} a month`
                   : 'No usual amount'}
+                {person.usual_payment_method
+                  ? ` · ${paymentMethodLabel(person.usual_payment_method)}`
+                  : ''}
               </Link>
             </Row>
           ) : null}

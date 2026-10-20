@@ -7,7 +7,7 @@ import { today } from '@/lib/dates';
 import { parseDollars } from '@/lib/money';
 import { parseFullName, type NameParts } from '@/lib/names';
 import { supabaseServer } from '@/lib/supabase/server';
-import type { MaritalStatus, Role } from '@/lib/types';
+import { PAYMENT_METHODS, type MaritalStatus, type PaymentMethod, type Role } from '@/lib/types';
 
 /** Which morning programme a person is being added to. */
 type MorningFlag = 'in_daf' | 'in_shachris';
@@ -27,6 +27,12 @@ function role(form: FormData): Role {
 /** An empty box means "no usual amount", not zero. */
 function monthlyAmount(form: FormData): number | null {
   return parseDollars(text(form, 'monthly_amount'));
+}
+
+/** Blank means nobody has said how he is paid, which is not the same as cash. */
+function usualPaymentMethod(form: FormData): PaymentMethod | null {
+  const value = text(form, 'usual_payment_method');
+  return PAYMENT_METHODS.find((m) => m.value === value)?.value ?? null;
 }
 
 /** Blank means nobody has said yet, which is not the same as single. */
@@ -74,6 +80,7 @@ export async function createPerson(form: FormData) {
       start_date: optionalDate(form, 'start_date') ?? today(),
       gets_paid: checkbox(form, 'gets_paid'),
       monthly_amount_cents: monthlyAmount(form),
+      usual_payment_method: usualPaymentMethod(form),
     })
     .select('id')
     .single();
@@ -135,6 +142,7 @@ export async function updatePerson(id: string, form: FormData) {
       start_date: optionalDate(form, 'start_date') ?? today(),
       gets_paid: checkbox(form, 'gets_paid'),
       monthly_amount_cents: monthlyAmount(form),
+      usual_payment_method: usualPaymentMethod(form),
     })
     .eq('id', id);
   if (error) throw new Error(error.message);

@@ -1,6 +1,6 @@
 import { ageOn, today } from '@/lib/dates';
 import { centsToInput } from '@/lib/money';
-import { MARITAL_STATUSES, type Group, type Person } from '@/lib/types';
+import { MARITAL_STATUSES, PAYMENT_METHODS, type Group, type Person } from '@/lib/types';
 
 import { Button, inputClasses } from './ui';
 
@@ -206,6 +206,32 @@ export function PersonForm({
               Prefills each month on the Payments page. A payment can still be more or less.
             </span>
           </label>
+
+          <div className="px-4 py-2.5">
+            <span className="mb-1 block text-[13px] text-ink-secondary">Usually paid by</span>
+            {/* Wraps rather than squeezing: six of these don't fit one row
+                at phone width. */}
+            <div className="flex flex-wrap gap-2">
+              {[{ value: '', label: 'Not said' }, ...PAYMENT_METHODS].map((option) => (
+                <label
+                  key={option.label}
+                  className="flex min-h-[2.75rem] min-w-[5.5rem] flex-1 items-center justify-center rounded-xl bg-canvas px-3 text-[15px] has-checked:bg-accent has-checked:text-on-accent"
+                >
+                  <input
+                    type="radio"
+                    name="usual_payment_method"
+                    value={option.value}
+                    defaultChecked={(person?.usual_payment_method ?? '') === option.value}
+                    className="sr-only"
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+            <span className="mt-1 block text-[13px] text-ink-tertiary">
+              Prefills how a payment was made. Any one payment can still be different.
+            </span>
+          </div>
 
           <label className="block px-4 py-2.5">
             <span className="mb-1 block text-[13px] text-ink-secondary">Start date</span>

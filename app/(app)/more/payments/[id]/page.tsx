@@ -32,6 +32,7 @@ export default async function PaymentPeriodPage(props: PageProps<'/more/payments
         name: person.name,
         role: person.role,
         expectedCents: person.monthly_amount_cents,
+        usualMethod: person.usual_payment_method,
         paidCents: theirs.reduce((sum, payment) => sum + payment.amount_cents, 0),
         payments: theirs,
       };

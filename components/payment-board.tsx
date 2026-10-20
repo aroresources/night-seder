@@ -23,6 +23,8 @@ export interface PaymentPersonRow {
   role: Role;
   /** His usual monthly amount, or null if he hasn't got one set. */
   expectedCents: number | null;
+  /** How he is usually paid, or null if nobody has said. */
+  usualMethod: PaymentMethod | null;
   paidCents: number;
   payments: Payment[];
 }
@@ -166,6 +168,7 @@ function PersonRow({ row, periodId }: { row: PaymentPersonRow; periodId: string 
       {adding ? (
         <PaymentForm
           defaultAmountCents={row.expectedCents}
+          defaultMethod={row.usualMethod}
           onSubmit={(form) => recordPayment(periodId, row.id, form)}
           onDone={() => setAdding(false)}
         />
@@ -185,11 +188,13 @@ function PersonRow({ row, periodId }: { row: PaymentPersonRow; periodId: string 
 function PaymentForm({
   payment,
   defaultAmountCents,
+  defaultMethod,
   onSubmit,
   onDone,
 }: {
   payment?: Payment;
   defaultAmountCents?: number | null;
+  defaultMethod?: PaymentMethod | null;
   onSubmit: (form: FormData) => Promise<void>;
   onDone: () => void;
 }) {
@@ -201,7 +206,11 @@ function PaymentForm({
         : '',
   );
   const [datePaid, setDatePaid] = useState(payment?.date_paid ?? today());
-  const [method, setMethod] = useState<PaymentMethod>(payment?.method ?? 'check');
+  // Editing keeps what was recorded; a new one starts on how he is usually
+  // paid, and falls back to a cheque only when nobody has said.
+  const [method, setMethod] = useState<PaymentMethod>(
+    payment?.method ?? defaultMethod ?? 'check',
+  );
   const [note, setNote] = useState(payment?.note ?? '');
   const [pending, startTransition] = useTransition();
   const router = useRouter();

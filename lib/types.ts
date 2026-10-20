@@ -71,6 +71,11 @@ export type Person = {
   gets_paid: boolean;
   /** What he usually gets for a month. A single payment can be more or less. */
   monthly_amount_cents: number | null;
+  /**
+   * How he is usually paid, which prefills the method when a payment is
+   * recorded. Null means nobody has said, not cash.
+   */
+  usual_payment_method: PaymentMethod | null;
 };
 
 export type Zman = {
