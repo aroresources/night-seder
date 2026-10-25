@@ -22,6 +22,8 @@ import {
   getCurrentZman,
   getGroupMembership,
   getGroups,
+  getPairs,
+  getPeople,
   getPerson,
   getSettings,
 } from '@/lib/queries';
@@ -40,6 +42,7 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
     entries,
     groups,
     membership,
+    people,
   ] =
     await Promise.all([
       getPerson(id),
@@ -51,8 +54,18 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
       getCorrespondence(id),
       getGroups(),
       getGroupMembership(),
+      getPeople(),
     ]);
   if (!person) notFound();
+
+  // Who he learns with this zman. The pair is the unit, so a pair of three
+  // shows both of the others.
+  const pairs = zman ? await getPairs(zman.id) : [];
+  const myPair = pairs.find((pair) => pair.members.some((member) => member.person_id === id));
+  const chavrusas = (myPair?.members ?? [])
+    .filter((member) => member.person_id !== id)
+    .map((member) => people.find((p) => p.id === member.person_id))
+    .filter((p) => p !== undefined);
 
   const memberOf = new Set(membership.get(id) ?? []);
   const myGroups = groups.filter((group) => memberOf.has(group.id));
@@ -146,6 +159,27 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
               {shachrisStats.attended}/{shachrisStats.expected} · {shachrisStats.percent}%
             </span>
           </Row>
+          {zman && person.in_night_seder ? (
+            <Row>
+              <span className="flex-1 text-[15px]">Chavrusa</span>
+              {chavrusas.length === 0 ? (
+                <Link href={`/more/zmanim/${zman.id}`} className="text-[15px] text-accent">
+                  Not paired
+                </Link>
+              ) : (
+                <span className="max-w-[60%] text-right text-[15px]">
+                  {chavrusas.map((chavrusa, index) => (
+                    <span key={chavrusa.id}>
+                      {index > 0 ? ', ' : ''}
+                      <Link href={`/more/people/${chavrusa.id}`} className="text-accent">
+                        {chavrusa.name}
+                      </Link>
+                    </span>
+                  ))}
+                </span>
+              )}
+            </Row>
+          ) : null}
           {person.gets_paid ? (
             <Row>
               <span className="flex-1 text-[15px]">Gets paid</span>

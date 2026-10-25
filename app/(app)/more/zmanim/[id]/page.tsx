@@ -4,14 +4,11 @@ import { notFound } from 'next/navigation';
 import {
   addZmanDayOff,
   copyPairings,
-  deletePair,
   deleteZman,
-  movePair,
-  removePairMember,
   removeZmanDayOff,
 } from '@/app/actions/zmanim';
 import { PairBuilder } from '@/components/pair-builder';
-import { PairEditor } from '@/components/pair-editor';
+import { PairingsList, type PairRow } from '@/components/pairings-list';
 import { Button, Group, Row, ScreenHeader, inputClasses } from '@/components/ui';
 import { scheduledNights } from '@/lib/attendance';
 import { formatCompactDate, formatShortDate, today } from '@/lib/dates';
@@ -42,6 +39,17 @@ export default async function ZmanPage(props: PageProps<'/more/zmanim/[id]'>) {
     }));
   const unpaired = pickable.filter((person) => !person.paired);
 
+  // Resolved here, where the people are already loaded: the list itself only
+  // ever needs the names.
+  const pairRows: PairRow[] = pairs.map((pair) => ({
+    id: pair.id,
+    label: pair.label,
+    members: pair.members
+      .map((member) => peopleById.get(member.person_id))
+      .filter((person) => person !== undefined)
+      .map((person) => ({ id: person.id, name: person.name, role: person.role })),
+  }));
+
   const nightsTotal = scheduledNights(zman, daysOff).length;
   const otherZmanim = allZmanim.filter((other) => other.id !== id);
 
@@ -60,83 +68,7 @@ export default async function ZmanPage(props: PageProps<'/more/zmanim/[id]'>) {
       <div className="mx-auto w-full max-w-[480px] pb-tabbar">
         <PairBuilder zmanId={id} people={pickable} />
 
-        {/* Pairings ------------------------------------------------------ */}
-        <Group title="Pairings">
-          {pairs.length === 0 ? (
-            <p className="px-4 py-3 text-[15px] text-ink-secondary">
-              No pairs yet. Add one, or copy last zman&apos;s.
-            </p>
-          ) : (
-            pairs.map((pair, index) => {
-              const members = pair.members
-                .map((member) => peopleById.get(member.person_id))
-                .filter((person) => person !== undefined);
-              const label = pair.label ?? members.map((m) => m.name).join(' & ');
-
-              return (
-                <div key={pair.id} className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <p className="min-w-0 flex-1 truncate text-[17px]">{label}</p>
-                    <form action={movePair.bind(null, id, pair.id, 'up')}>
-                      <button
-                        type="submit"
-                        disabled={index === 0}
-                        aria-label={`Move ${label} up`}
-                        className="h-11 w-8 text-[17px] text-accent disabled:opacity-30"
-                      >
-                        &uarr;
-                      </button>
-                    </form>
-                    <form action={movePair.bind(null, id, pair.id, 'down')}>
-                      <button
-                        type="submit"
-                        disabled={index === pairs.length - 1}
-                        aria-label={`Move ${label} down`}
-                        className="h-11 w-8 text-[17px] text-accent disabled:opacity-30"
-                      >
-                        &darr;
-                      </button>
-                    </form>
-                    <form action={deletePair.bind(null, pair.id)}>
-                      <button type="submit" className="h-11 px-2 text-[15px] text-danger">
-                        Delete
-                      </button>
-                    </form>
-                  </div>
-
-                  <div className="mt-1 flex flex-col">
-                    {members.map((member) => (
-                      <div key={member.id} className="flex items-center gap-2 py-0.5">
-                        <span className="flex-1 text-[15px] text-ink-secondary">
-                          {member.name}
-                          <span className="text-ink-tertiary">
-                            {' '}
-                            {member.role === 'rabbi' ? 'R' : 'W'}
-                          </span>
-                        </span>
-                        <form action={removePairMember.bind(null, pair.id, member.id)}>
-                          <button type="submit" className="px-2 py-1 text-[13px] text-danger">
-                            Remove
-                          </button>
-                        </form>
-                      </div>
-                    ))}
-                  </div>
-
-                  <PairEditor
-                    pairId={pair.id}
-                    label={label}
-                    hasOwnLabel={pair.label !== null}
-                    candidates={pickable.filter(
-                      (person) => !members.some((member) => member.id === person.id),
-                    )}
-                  />
-                </div>
-              );
-            })
-          )}
-        </Group>
-
+        <PairingsList zmanId={id} pairs={pairRows} pickable={pickable} />
         <Group title="Still unpaired">
           {unpaired.length === 0 ? (
             <p className="px-4 py-3 text-[15px] text-ink-secondary">Everybody is paired.</p>
