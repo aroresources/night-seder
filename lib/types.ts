@@ -55,6 +55,14 @@ export type Person = {
   email: string | null;
   address: string | null;
   marital_status: MaritalStatus | null;
+  /** What he does for a living. */
+  job: string | null;
+  /** Who he learns under. */
+  rebbe: string | null;
+  /** What he is looking for in a shidduch, in his own words. */
+  looking_for: string | null;
+  /** Where his photo sits in the bucket. Never a URL: those expire. */
+  photo_path: string | null;
   /** He replied STOP. Set by the app when Twilio says so; never guessed. */
   sms_opt_out: boolean;
   birthday: CalendarDate | null;
@@ -188,6 +196,22 @@ export function paymentMethodLabel(method: PaymentMethod): string {
   return PAYMENT_METHODS.find((m) => m.value === method)?.label ?? method;
 }
 
+/**
+ * A file kept against a person — a shidduch resume, usually. The row records
+ * what it is; the file itself sits in the private `person-files` bucket.
+ */
+export type PersonFile = {
+  id: string;
+  created_at: string;
+  person_id: string;
+  /** The object's path inside the bucket. */
+  path: string;
+  /** What it was called when it was uploaded. */
+  name: string;
+  content_type: string | null;
+  size_bytes: number | null;
+};
+
 /** Usually a Jewish month. Added by hand; `start_date` orders and names it. */
 export type PaymentPeriod = {
   id: string;
@@ -253,6 +277,7 @@ export type Database = {
       messages: TableDef<Message, 'body'>;
       message_recipients: TableDef<MessageRecipient, 'message_id' | 'person_id' | 'status'>;
       person_groups: TableDef<PersonGroup, 'person_id' | 'group_id'>;
+      person_files: TableDef<PersonFile, 'person_id' | 'path' | 'name'>;
       payment_periods: TableDef<PaymentPeriod, 'name' | 'start_date' | 'end_date'>;
       payments: TableDef<Payment, 'period_id' | 'person_id' | 'amount_cents' | 'method'>;
       settings: TableDef<Settings, 'id'>;

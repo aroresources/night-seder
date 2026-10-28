@@ -113,6 +113,28 @@ export function PersonForm({
           </div>
 
           <label className="block px-4 py-2.5">
+            <span className="mb-1 block text-[13px] text-ink-secondary">Job (optional)</span>
+            <input name="job" defaultValue={person?.job ?? ''} className={inputClasses} />
+          </label>
+
+          <label className="block px-4 py-2.5">
+            <span className="mb-1 block text-[13px] text-ink-secondary">Rebbe (optional)</span>
+            <input name="rebbe" defaultValue={person?.rebbe ?? ''} className={inputClasses} />
+          </label>
+
+          <label className="block px-4 py-2.5">
+            <span className="mb-1 block text-[13px] text-ink-secondary">
+              What he is looking for (optional)
+            </span>
+            <textarea
+              name="looking_for"
+              rows={3}
+              defaultValue={person?.looking_for ?? ''}
+              className={inputClasses}
+            />
+          </label>
+
+          <label className="block px-4 py-2.5">
             <span className="mb-1 block text-[13px] text-ink-secondary">Birthday (optional)</span>
             <input
               type="date"

@@ -4,6 +4,7 @@ import { today } from '@/lib/dates';
 import type { CalendarDate } from '@/lib/dates';
 import { compareByName } from '@/lib/names';
 import { supabaseServer } from '@/lib/supabase/server';
+import { BUCKET } from '@/lib/uploads';
 import type {
   Attendance,
   AttendanceTable,
@@ -12,6 +13,7 @@ import type {
   Group,
   Message,
   MessageRecipient,
+  PersonFile,
   Pair,
   PairMember,
   Payment,
@@ -299,4 +301,29 @@ export async function getCorrespondence(personId?: string): Promise<Corresponden
     if (personId) query = query.eq('person_id', personId);
     return query.order('date', { ascending: false }).order('created_at', { ascending: false }).range(from, to);
   });
+}
+
+/** The files kept against a person, newest first. */
+export async function getPersonFiles(personId: string): Promise<PersonFile[]> {
+  const supabase = await supabaseServer();
+  const { data, error } = await supabase
+    .from('person_files')
+    .select('*')
+    .eq('person_id', personId)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/**
+ * A link to a private object that stops working after an hour.
+ *
+ * The bucket serves nothing without one, so a resume cannot be forwarded on
+ * as a URL and still open tomorrow. Returns null rather than throwing: a
+ * missing file should leave the rest of his page standing.
+ */
+export async function signedUrl(path: string, seconds = 3600): Promise<string | null> {
+  const supabase = await supabaseServer();
+  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, seconds);
+  return data?.signedUrl ?? null;
 }

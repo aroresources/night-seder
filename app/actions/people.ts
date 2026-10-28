@@ -7,6 +7,7 @@ import { today } from '@/lib/dates';
 import { parseDollars } from '@/lib/money';
 import { parseFullName, type NameParts } from '@/lib/names';
 import { supabaseServer } from '@/lib/supabase/server';
+import { BUCKET } from '@/lib/uploads';
 import { PAYMENT_METHODS, type MaritalStatus, type PaymentMethod, type Role } from '@/lib/types';
 
 /** Which morning programme a person is being added to. */
@@ -71,6 +72,9 @@ export async function createPerson(form: FormData) {
       address: optionalText(form, 'address'),
       marital_status: maritalStatus(form),
       birthday: optionalDate(form, 'birthday'),
+      job: optionalText(form, 'job'),
+      rebbe: optionalText(form, 'rebbe'),
+      looking_for: optionalText(form, 'looking_for'),
       role: role(form),
       phone: optionalText(form, 'phone'),
       notes: optionalText(form, 'notes'),
@@ -134,6 +138,9 @@ export async function updatePerson(id: string, form: FormData) {
       address: optionalText(form, 'address'),
       marital_status: maritalStatus(form),
       birthday: optionalDate(form, 'birthday'),
+      job: optionalText(form, 'job'),
+      rebbe: optionalText(form, 'rebbe'),
+      looking_for: optionalText(form, 'looking_for'),
       role: role(form),
       phone: optionalText(form, 'phone'),
       notes: optionalText(form, 'notes'),
@@ -200,8 +207,22 @@ export async function deletePerson(id: string) {
     throw new Error('This person has history. Make them inactive instead of deleting them.');
   }
 
+  // His photo and files go with him. The rows cascade on their own, but the
+  // objects would be left behind in the bucket with nothing pointing at them.
+  const { data: files } = await supabase.from('person_files').select('path').eq('person_id', id);
+  const { data: person } = await supabase
+    .from('people')
+    .select('photo_path')
+    .eq('id', id)
+    .single();
+  const objects = [...(files ?? []).map((file) => file.path), person?.photo_path].filter(
+    (path): path is string => typeof path === 'string',
+  );
+
   const { error } = await supabase.from('people').delete().eq('id', id);
   if (error) throw new Error(error.message);
+
+  if (objects.length > 0) await supabase.storage.from(BUCKET).remove(objects);
 
   refreshEverything();
   redirect('/more/people');

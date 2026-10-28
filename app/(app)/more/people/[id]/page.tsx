@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { snoozeForDays } from '@/app/actions/contact';
 import { deletePerson, setPersonActive, setTrackContact } from '@/app/actions/people';
 import { ContactLog, SnoozeButtons } from '@/components/contact-log';
+import { PersonFiles, PersonPhoto } from '@/components/person-uploads';
 import { Chip, Group, Row, ScreenHeader } from '@/components/ui';
 import {
   attendanceByPerson,
@@ -25,7 +26,9 @@ import {
   getPairs,
   getPeople,
   getPerson,
+  getPersonFiles,
   getSettings,
+  signedUrl,
 } from '@/lib/queries';
 
 export default async function PersonPage(props: PageProps<'/more/people/[id]'>) {
@@ -44,6 +47,7 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
     groups,
     membership,
     people,
+    files,
   ] =
     await Promise.all([
       getPerson(id),
@@ -57,8 +61,16 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
       getGroups(),
       getGroupMembership(),
       getPeople(),
+      getPersonFiles(id),
     ]);
   if (!person) notFound();
+
+  // Signed here rather than in the component: the links expire, so they are
+  // made fresh each time the page is rendered.
+  const [photoUrl, fileUrls] = await Promise.all([
+    person.photo_path ? signedUrl(person.photo_path) : Promise.resolve(null),
+    Promise.all(files.map((file) => signedUrl(file.path))),
+  ]);
 
   // Who he learns with this zman. The pair is the unit, so a pair of three
   // shows both of the others.
@@ -218,22 +230,6 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
               </span>
             </Row>
           ) : null}
-          {person.marital_status ? (
-            <Row>
-              <span className="flex-1 text-[15px]">Status</span>
-              <span className="text-[15px] text-ink-secondary">
-                {maritalLabel(person.marital_status)}
-              </span>
-            </Row>
-          ) : null}
-          {person.birthday ? (
-            <Row>
-              <span className="flex-1 text-[15px]">Age</span>
-              <span className="text-[15px] text-ink-secondary">
-                {ageOn(person.birthday, now)} · {formatShortDate(person.birthday)}
-              </span>
-            </Row>
-          ) : null}
           <Row>
             <span className="flex-1 text-[15px]">Member since</span>
             <span className="text-[15px] text-ink-secondary">
@@ -241,6 +237,60 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
               {person.end_date ? ` – ${formatShortDate(person.end_date)}` : ''}
             </span>
           </Row>
+        </Group>
+
+        <Group title="Shidduch">
+          <PersonPhoto personId={id} url={photoUrl} name={person.name} />
+          <Row>
+            <span className="flex-1 text-[15px]">Status</span>
+            <span className="text-[15px] text-ink-secondary">
+              {person.marital_status ? maritalLabel(person.marital_status) : 'Not said'}
+            </span>
+          </Row>
+          <Row>
+            <span className="flex-1 text-[15px]">Age</span>
+            <span className="text-[15px] text-ink-secondary">
+              {person.birthday
+                ? `${ageOn(person.birthday, now)} · ${formatShortDate(person.birthday)}`
+                : 'No birthday'}
+            </span>
+          </Row>
+          {person.job ? (
+            <Row>
+              <span className="flex-1 text-[15px]">Job</span>
+              <span className="max-w-[60%] text-right text-[15px] text-ink-secondary">
+                {person.job}
+              </span>
+            </Row>
+          ) : null}
+          {person.rebbe ? (
+            <Row>
+              <span className="flex-1 text-[15px]">Rebbe</span>
+              <span className="max-w-[60%] text-right text-[15px] text-ink-secondary">
+                {person.rebbe}
+              </span>
+            </Row>
+          ) : null}
+          {person.looking_for ? (
+            <Row>
+              <div className="flex-1">
+                <span className="block text-[15px]">Looking for</span>
+                <p className="mt-1 text-[15px] whitespace-pre-wrap text-ink-secondary">
+                  {person.looking_for}
+                </p>
+              </div>
+            </Row>
+          ) : null}
+          <PersonFiles
+            personId={id}
+            files={files.map((file, index) => ({
+              id: file.id,
+              name: file.name,
+              created_at: file.created_at,
+              size_bytes: file.size_bytes,
+              url: fileUrls[index],
+            }))}
+          />
         </Group>
 
         <Group title="Contact">
