@@ -13,6 +13,7 @@ import {
 import { formatShortDate } from '@/lib/dates';
 import { formatBytes } from '@/lib/uploads';
 
+import { PhotoCrop } from './photo-crop';
 import { useToast } from './toast';
 
 /**
@@ -56,23 +57,71 @@ export function PersonPhoto({
   url: string | null;
   name: string;
 }) {
-  const { pending, input, onPick } = useUpload((form) => uploadPersonPhoto(personId, form));
+  const [picked, setPicked] = useState<File | null>(null);
+  const [full, setFull] = useState(false);
+  const [pending, startTransition] = useTransition();
   const [removing, startRemoving] = useTransition();
+  const input = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const toast = useToast();
 
+  function upload(file: File) {
+    const form = new FormData();
+    form.set('file', file);
+    startTransition(async () => {
+      try {
+        await uploadPersonPhoto(personId, form);
+        router.refresh();
+      } catch (error) {
+        toast(error instanceof Error ? error.message : "Couldn't upload that.");
+      } finally {
+        setPicked(null);
+      }
+    });
+  }
+
   return (
     <div className="flex items-center gap-4 px-4 py-3">
-      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-canvas">
-        {url ? (
+      {picked ? (
+        <PhotoCrop file={picked} onDone={upload} onCancel={() => setPicked(null)} />
+      ) : null}
+
+      {full && url ? (
+        // Tapping anywhere closes it: there is nothing else to do in here.
+        <button
+          type="button"
+          onClick={() => setFull(false)}
+          aria-label="Close the photo"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+        >
           <Image
             src={url}
             alt={name}
-            width={160}
-            height={160}
+            width={800}
+            height={800}
             unoptimized
-            className="h-20 w-20 object-cover"
+            className="max-h-full w-auto max-w-full rounded-xl object-contain"
           />
+        </button>
+      ) : null}
+
+      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-canvas">
+        {url ? (
+          <button
+            type="button"
+            onClick={() => setFull(true)}
+            aria-label={`See ${name} larger`}
+            className="block h-20 w-20"
+          >
+            <Image
+              src={url}
+              alt={name}
+              width={160}
+              height={160}
+              unoptimized
+              className="h-20 w-20 object-cover"
+            />
+          </button>
         ) : (
           <div className="flex h-20 w-20 items-center justify-center text-[13px] text-ink-tertiary">
             No photo
@@ -87,7 +136,12 @@ export function PersonPhoto({
             ref={input}
             type="file"
             accept="image/*"
-            onChange={onPick}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              // Cleared straight away so picking the same photo again still fires.
+              event.target.value = '';
+              if (file) setPicked(file);
+            }}
             disabled={pending}
             className="sr-only"
           />
