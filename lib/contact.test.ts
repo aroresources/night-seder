@@ -6,6 +6,7 @@ import {
   contactReasons,
   groupFor,
   isSnoozed,
+  stillAttending,
   type ContactPerson,
   type Streak,
   type Streaks,
@@ -237,5 +238,66 @@ test('every programme can flag the same person at once', () => {
   assert.deepEqual(
     reasons.map((r) => r.kind),
     ['night', 'daf', 'shachris', 'follow_up'],
+  );
+});
+
+test('missing Shachris says he was still at night seder', () => {
+  const him = person({ in_shachris: true });
+  const his = streaks({
+    shachris: { streak: 8, lastAttended: null },
+    night: { streak: 0, lastAttended: '2026-09-16' },
+  });
+  const reasons = contactReasons(him, his, null, thresholds, TODAY);
+
+  assert.equal(stillAttending(him, his, reasons), 'Was at Night seder Sep 16, 2026');
+});
+
+test('a programme he has never once attended is not offered as reassurance', () => {
+  const him = person({ in_shachris: true });
+  const his = streaks({
+    shachris: { streak: 8, lastAttended: null },
+    night: { streak: 0, lastAttended: null },
+  });
+
+  assert.equal(stillAttending(him, his, contactReasons(him, his, null, thresholds, TODAY)), null);
+});
+
+test('a programme he is also flagged for is not offered as reassurance', () => {
+  const him = person({ in_shachris: true });
+  const his = streaks({
+    shachris: { streak: 8, lastAttended: '2026-09-01' },
+    night: { streak: 5, lastAttended: '2026-09-02' },
+  });
+
+  assert.equal(stillAttending(him, his, contactReasons(him, his, null, thresholds, TODAY)), null);
+});
+
+test('a due follow-up on its own says nothing about attendance', () => {
+  const him = person();
+  const his = streaks();
+  const reasons = contactReasons(
+    him,
+    his,
+    { date: '2026-09-01', follow_up_date: '2026-09-10' },
+    thresholds,
+    TODAY,
+  );
+
+  assert.equal(reasons.length, 1, 'flagged only for the follow-up');
+  assert.equal(stillAttending(him, his, reasons), null);
+});
+
+test('two programmes still being attended are both named', () => {
+  const him = person({ in_daf: true, in_shachris: true });
+  const his = streaks({
+    shachris: { streak: 8, lastAttended: '2026-08-20' },
+    night: { streak: 0, lastAttended: '2026-09-16' },
+    daf: { streak: 1, lastAttended: '2026-09-15' },
+  });
+  const reasons = contactReasons(him, his, null, thresholds, TODAY);
+
+  assert.equal(
+    stillAttending(him, his, reasons),
+    'Was at Night seder Sep 16, 2026, Daf Sep 15, 2026',
   );
 });

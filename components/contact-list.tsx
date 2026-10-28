@@ -22,6 +22,11 @@ export interface ContactRow {
   email: string | null;
   active: boolean;
   trackContact: boolean;
+  inNightSeder: boolean;
+  inDaf: boolean;
+  inShachris: boolean;
+  /** "Was at Night seder Oct 27" — the programmes he has not dropped. */
+  stillAttending: string | null;
   snoozedUntil: string | null;
   lastContact: { date: string; channel: Channel; note: string | null } | null;
   reasons: Reason[];
@@ -30,14 +35,48 @@ export interface ContactRow {
   groupIds: string[];
 }
 
-type Filter = 'all' | 'rabbi' | 'working' | 'hidden';
+type Filter =
+  | 'all'
+  | 'night'
+  | 'daf'
+  | 'shachris'
+  | 'none'
+  | 'rabbi'
+  | 'working'
+  | 'hidden';
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'all', label: 'All' },
+  { value: 'night', label: 'Night seder' },
+  { value: 'daf', label: 'Daf' },
+  { value: 'shachris', label: 'Shachris' },
+  { value: 'none', label: 'Not in any' },
   { value: 'rabbi', label: 'Rabbis' },
   { value: 'working', label: 'Working' },
   { value: 'hidden', label: 'Hidden' },
 ];
+
+/** One place to say what each chip means, so the list and the counts agree. */
+function matchesFilter(row: ContactRow, filter: Filter): boolean {
+  switch (filter) {
+    case 'night':
+      return row.inNightSeder;
+    case 'daf':
+      return row.inDaf;
+    case 'shachris':
+      return row.inShachris;
+    // The men nobody takes attendance for. They can never be flagged for a
+    // missed session, so this is the list you work through by last contact.
+    case 'none':
+      return !row.inNightSeder && !row.inDaf && !row.inShachris;
+    case 'rabbi':
+      return row.role === 'rabbi';
+    case 'working':
+      return row.role === 'working';
+    default:
+      return true;
+  }
+}
 
 export function ContactList({ rows, groups }: { rows: ContactRow[]; groups: Group[] }) {
   const [filter, setFilter] = useState<Filter>('all');
@@ -49,8 +88,7 @@ export function ContactList({ rows, groups }: { rows: ContactRow[]; groups: Grou
     const needle = search.trim().toLowerCase();
     return rows.filter((row) => {
       if (filter === 'hidden' ? row.trackContact : !row.trackContact) return false;
-      if (filter === 'rabbi' && row.role !== 'rabbi') return false;
-      if (filter === 'working' && row.role !== 'working') return false;
+      if (!matchesFilter(row, filter)) return false;
       if (topic && !row.groupIds.includes(topic)) return false;
       if (needle && !row.name.toLowerCase().includes(needle)) return false;
       return true;
@@ -217,6 +255,10 @@ function Row({ row }: { row: ContactRow }) {
 
           {row.reasons.length > 0 && row.reasons[0].detail ? (
             <p className="mt-1 text-[13px] text-ink-secondary">{row.reasons[0].detail}</p>
+          ) : null}
+
+          {row.stillAttending ? (
+            <p className="mt-1 text-[13px] text-ink-secondary">{row.stillAttending}</p>
           ) : null}
 
           <p className="mt-1 text-[13px] text-ink-secondary">{lastLine}</p>

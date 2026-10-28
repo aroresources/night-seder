@@ -2,7 +2,12 @@ import 'server-only';
 
 import type { ContactRow } from '@/components/contact-list';
 import { streaksForAll, type PersonWindow, type StreakSummary } from '@/lib/attendance';
-import { byLeastRecentlyContacted, contactReasons, groupFor } from '@/lib/contact';
+import {
+  byLeastRecentlyContacted,
+  contactReasons,
+  groupFor,
+  stillAttending,
+} from '@/lib/contact';
 import { today } from '@/lib/dates';
 import {
   getAllAttendance,
@@ -92,6 +97,10 @@ export async function loadContactData(): Promise<ContactData> {
       email: person.email,
       active: person.active,
       trackContact: person.track_contact,
+      inNightSeder: person.in_night_seder,
+      inDaf: person.in_daf,
+      inShachris: person.in_shachris,
+      stillAttending: stillAttending(person, { night, daf, shachris }, reasons),
       snoozedUntil: person.snoozed_until,
       lastContact: latest
         ? { date: latest.date, channel: latest.channel, note: latest.note }

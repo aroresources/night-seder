@@ -111,6 +111,48 @@ export function contactReasons(
   return reasons;
 }
 
+const PROGRAM_LABELS = {
+  night: 'Night seder',
+  daf: 'Daf',
+  shachris: 'Shachris',
+} as const;
+
+/**
+ * The other side of the story: the programmes he is in, is *not* flagged for,
+ * and is still turning up to.
+ *
+ * "Missed 8 Shachris" on its own reads like a man who has drifted off. Often
+ * he is there every night and simply doesn't make the morning, which is a
+ * different conversation — so the row says so rather than leaving you to
+ * check his page.
+ *
+ * Only worth saying when he is flagged for attendance somewhere: a follow-up
+ * is about a conversation, not about who turns up. A programme he has never
+ * once attended is left out, because there is nothing reassuring in it.
+ */
+export function stillAttending(
+  person: ContactPerson,
+  streaks: Streaks,
+  reasons: Reason[],
+): string | null {
+  if (!reasons.some((reason) => reason.kind !== 'follow_up')) return null;
+
+  const flagged = new Set(reasons.map((reason) => reason.kind));
+  const inProgram = {
+    night: person.in_night_seder,
+    daf: person.in_daf,
+    shachris: person.in_shachris,
+  };
+
+  const parts = (['night', 'daf', 'shachris'] as const)
+    .filter((program) => inProgram[program] && !flagged.has(program))
+    .map((program) => ({ program, last: streaks[program].lastAttended }))
+    .filter((entry) => entry.last !== null)
+    .map((entry) => `${PROGRAM_LABELS[entry.program]} ${formatShortDate(entry.last!)}`);
+
+  return parts.length === 0 ? null : `Was at ${parts.join(', ')}`;
+}
+
 export type Group = 'needs_attention' | 'everyone_else' | 'snoozed';
 
 export function groupFor(
