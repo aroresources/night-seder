@@ -155,10 +155,8 @@ export default async function ReportsPage(props: PageProps<'/reports'>) {
     zmanim,
     currentZman,
     nightAttendance,
-    dafAttendance,
-    shachrisAttendance,
-    dafDaysOff,
-    shachrisDaysOff,
+    morningAttendance,
+    morningDaysOff,
     groups,
     membership,
   ] = await Promise.all([
@@ -167,10 +165,12 @@ export default async function ReportsPage(props: PageProps<'/reports'>) {
     getZmanim(),
     getCurrentZman(),
     getAllAttendance('night_attendance'),
-    getAllAttendance('daf_attendance'),
-    getAllAttendance('shachris_attendance'),
-    getMorningDaysOff('daf_days_off'),
-    getMorningDaysOff('shachris_days_off'),
+    Promise.all(MORNING_PROGRAMS.map((program) => getAllAttendance(program.table))),
+    Promise.all(
+      MORNING_PROGRAMS.map((program) =>
+        program.daysOffTable ? getMorningDaysOff(program.daysOffTable) : Promise.resolve([]),
+      ),
+    ),
     getGroups(),
     getGroupMembership(),
   ]);
@@ -280,11 +280,11 @@ export default async function ReportsPage(props: PageProps<'/reports'>) {
 
   const morningEnd = minDate(dafEnd, now);
 
-  // Daf and Shachris are the same report twice over, so they are built the
-  // same way rather than written out twice. Both share the range picker.
-  const morningSections = MORNING_PROGRAMS.map((program) => {
-    const attendance = program.value === 'daf' ? dafAttendance : shachrisAttendance;
-    const daysOff = program.value === 'daf' ? dafDaysOff : shachrisDaysOff;
+  // Every morning programme is the same report, so they are built the same
+  // way rather than written out once each. They share the range picker.
+  const morningSections = MORNING_PROGRAMS.map((program, index) => {
+    const attendance = morningAttendance[index];
+    const daysOff = morningDaysOff[index];
 
     const held = heldDatesInRange(attendance, dafStart, morningEnd);
     const rows = buildRows(
@@ -295,7 +295,7 @@ export default async function ReportsPage(props: PageProps<'/reports'>) {
       ),
       held,
       attendance,
-      settings[program.threshold],
+      program.threshold === null ? Infinity : settings[program.threshold],
       () => null,
       groupsOf,
     );
@@ -305,11 +305,10 @@ export default async function ReportsPage(props: PageProps<'/reports'>) {
       counts.set(row.date, (counts.get(row.date) ?? 0) + 1);
     }
 
-    const notRecorded = notRecordedDates(
-      scheduledMornings(dafStart, morningEnd, daysOff),
-      attendance,
-      now,
-    );
+    const notRecorded =
+      program.daysOffTable === null
+        ? []
+        : notRecordedDates(scheduledMornings(dafStart, morningEnd, daysOff), attendance, now);
 
     return { program, held, rows, counts, notRecorded };
   });

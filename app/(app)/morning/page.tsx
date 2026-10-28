@@ -29,7 +29,7 @@ export default async function MorningPage(props: PageProps<'/morning'>) {
 
   const [people, daysOff, attendance, topicGroups, membership] = await Promise.all([
     getPeople(),
-    getMorningDaysOff(program.daysOffTable),
+    program.daysOffTable ? getMorningDaysOff(program.daysOffTable) : Promise.resolve([]),
     getAttendanceOn(program.table, date),
     getGroups(),
     getGroupMembership(),
@@ -41,6 +41,8 @@ export default async function MorningPage(props: PageProps<'/morning'>) {
       person.active && person[program.flag] && withinWindow(date, person.start_date, person.end_date),
   );
 
+  // Misc is never scheduled and never off: you mark whoever turned up.
+  const scheduled = program.daysOffTable !== null;
   const status = morningScheduleStatus(daysOff, date);
   const alreadyADayOff = daysOff.some((day) => day.date === date);
 
@@ -50,7 +52,7 @@ export default async function MorningPage(props: PageProps<'/morning'>) {
 
   async function addDayOff(reason: string) {
     'use server';
-    await makeMorningADayOff(program.daysOffTable, date, reason);
+    if (program.daysOffTable) await makeMorningADayOff(program.daysOffTable, date, reason);
   }
 
   async function addExisting(personId: string) {
@@ -72,7 +74,7 @@ export default async function MorningPage(props: PageProps<'/morning'>) {
       <div className="mx-auto w-full max-w-[480px] pb-board">
         <ProgramSwitch current={program.value} />
 
-        {!status.scheduled ? (
+        {!scheduled ? null : !status.scheduled ? (
           <Banner
             action={
               alreadyADayOff ? null : (
@@ -89,7 +91,11 @@ export default async function MorningPage(props: PageProps<'/morning'>) {
         )}
 
         {eligible.length === 0 ? (
-          <Empty>Nobody is in {program.label} on this date yet.</Empty>
+          <Empty>
+            {program.value === 'misc'
+              ? 'Nobody is on the Misc list yet. Add whoever turns up now and again.'
+              : `Nobody is in ${program.label} on this date yet.`}
+          </Empty>
         ) : (
           <AttendanceBoard
             key={`${program.value}-${date}`}

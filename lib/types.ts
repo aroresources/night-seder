@@ -63,6 +63,11 @@ export type Person = {
   in_night_seder: boolean;
   in_daf: boolean;
   in_shachris: boolean;
+  /**
+   * On the Misc list: he turns up sometimes and is welcome, but he is not
+   * expected, so he is never marked down for a morning he missed.
+   */
+  in_misc: boolean;
   start_date: CalendarDate;
   end_date: CalendarDate | null;
   track_contact: boolean;
@@ -240,6 +245,7 @@ export type Database = {
       night_attendance: TableDef<Attendance, 'date' | 'person_id'>;
       daf_attendance: TableDef<Attendance, 'date' | 'person_id'>;
       shachris_attendance: TableDef<Attendance, 'date' | 'person_id'>;
+      misc_attendance: TableDef<Attendance, 'date' | 'person_id'>;
       daf_days_off: TableDef<DafDayOff, 'date'>;
       shachris_days_off: TableDef<DafDayOff, 'date'>;
       correspondence: TableDef<Correspondence, 'person_id' | 'channel'>;
@@ -257,18 +263,24 @@ export type Database = {
 };
 
 /** The attendance tables share a shape; this names which one to write to. */
-export type AttendanceTable = 'night_attendance' | 'daf_attendance' | 'shachris_attendance';
+export type AttendanceTable =
+  | 'night_attendance'
+  | 'daf_attendance'
+  | 'shachris_attendance'
+  | 'misc_attendance';
 
-/** The two things that happen in the morning, behind the Morning tab. */
-export type MorningProgram = 'daf' | 'shachris';
+/** What sits behind the Morning tab. */
+export type MorningProgram = 'daf' | 'shachris' | 'misc';
 
 export const MORNING_PROGRAMS: {
   value: MorningProgram;
   label: string;
-  table: 'daf_attendance' | 'shachris_attendance';
-  daysOffTable: 'daf_days_off' | 'shachris_days_off';
-  flag: 'in_daf' | 'in_shachris';
-  threshold: 'daf_absence_threshold' | 'shachris_absence_threshold';
+  table: 'daf_attendance' | 'shachris_attendance' | 'misc_attendance';
+  /** Null when nothing is scheduled, so no day can be a day off. */
+  daysOffTable: 'daf_days_off' | 'shachris_days_off' | null;
+  flag: 'in_daf' | 'in_shachris' | 'in_misc';
+  /** Null when missing it is never chased. */
+  threshold: 'daf_absence_threshold' | 'shachris_absence_threshold' | null;
 }[] = [
   {
     value: 'daf',
@@ -285,6 +297,17 @@ export const MORNING_PROGRAMS: {
     daysOffTable: 'shachris_days_off',
     flag: 'in_shachris',
     threshold: 'shachris_absence_threshold',
+  },
+  // Marked, never missed: the men who turn up now and again without being on
+  // anybody's list. Nothing is scheduled, so there is no day off and no
+  // absence to chase — only a record of the mornings he did come.
+  {
+    value: 'misc',
+    label: 'Misc',
+    table: 'misc_attendance',
+    daysOffTable: null,
+    flag: 'in_misc',
+    threshold: null,
   },
 ];
 

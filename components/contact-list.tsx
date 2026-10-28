@@ -25,6 +25,7 @@ export interface ContactRow {
   inNightSeder: boolean;
   inDaf: boolean;
   inShachris: boolean;
+  inMisc: boolean;
   /** "Was at Night seder Oct 27" — the programmes he has not dropped. */
   stillAttending: string | null;
   snoozedUntil: string | null;
@@ -40,6 +41,7 @@ type Filter =
   | 'night'
   | 'daf'
   | 'shachris'
+  | 'misc'
   | 'none'
   | 'rabbi'
   | 'working'
@@ -50,6 +52,7 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'night', label: 'Night seder' },
   { value: 'daf', label: 'Daf' },
   { value: 'shachris', label: 'Shachris' },
+  { value: 'misc', label: 'Misc' },
   { value: 'none', label: 'Not in any' },
   { value: 'rabbi', label: 'Rabbis' },
   { value: 'working', label: 'Working' },
@@ -65,10 +68,12 @@ function matchesFilter(row: ContactRow, filter: Filter): boolean {
       return row.inDaf;
     case 'shachris':
       return row.inShachris;
+    case 'misc':
+      return row.inMisc;
     // The men nobody takes attendance for. They can never be flagged for a
     // missed session, so this is the list you work through by last contact.
     case 'none':
-      return !row.inNightSeder && !row.inDaf && !row.inShachris;
+      return !row.inNightSeder && !row.inDaf && !row.inShachris && !row.inMisc;
     case 'rabbi':
       return row.role === 'rabbi';
     case 'working':

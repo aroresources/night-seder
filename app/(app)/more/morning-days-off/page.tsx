@@ -8,14 +8,18 @@ import { MORNING_PROGRAMS } from '@/lib/types';
 import type { DafDayOff } from '@/lib/types';
 
 export default async function MorningDaysOffPage() {
-  const [dafDaysOff, shachrisDaysOff] = await Promise.all(
-    MORNING_PROGRAMS.map((program) => getMorningDaysOff(program.daysOffTable)),
+  // Only what is scheduled: Misc has no days, so it can have no days off.
+  const scheduled = MORNING_PROGRAMS.filter((program) => program.daysOffTable !== null);
+  const daysOffPer = await Promise.all(
+    scheduled.map((program) => getMorningDaysOff(program.daysOffTable!)),
   );
 
-  const sections: { label: string; table: 'daf_days_off' | 'shachris_days_off'; daysOff: DafDayOff[] }[] = [
-    { label: 'Daf', table: 'daf_days_off', daysOff: dafDaysOff },
-    { label: 'Shachris', table: 'shachris_days_off', daysOff: shachrisDaysOff },
-  ];
+  const sections: { label: string; table: 'daf_days_off' | 'shachris_days_off'; daysOff: DafDayOff[] }[] =
+    scheduled.map((program, index) => ({
+      label: program.label,
+      table: program.daysOffTable!,
+      daysOff: daysOffPer[index],
+    }));
 
   return (
     <>

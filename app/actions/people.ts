@@ -10,7 +10,7 @@ import { supabaseServer } from '@/lib/supabase/server';
 import { PAYMENT_METHODS, type MaritalStatus, type PaymentMethod, type Role } from '@/lib/types';
 
 /** Which morning programme a person is being added to. */
-type MorningFlag = 'in_daf' | 'in_shachris';
+type MorningFlag = 'in_daf' | 'in_shachris' | 'in_misc';
 
 import { checkbox, optionalDate, optionalText, text } from './form';
 import { setPersonGroups } from './groups';
@@ -77,6 +77,7 @@ export async function createPerson(form: FormData) {
       in_night_seder: checkbox(form, 'in_night_seder'),
       in_daf: checkbox(form, 'in_daf'),
       in_shachris: checkbox(form, 'in_shachris'),
+      in_misc: checkbox(form, 'in_misc'),
       start_date: optionalDate(form, 'start_date') ?? today(),
       gets_paid: checkbox(form, 'gets_paid'),
       monthly_amount_cents: monthlyAmount(form),
@@ -139,6 +140,7 @@ export async function updatePerson(id: string, form: FormData) {
       in_night_seder: checkbox(form, 'in_night_seder'),
       in_daf: checkbox(form, 'in_daf'),
       in_shachris: checkbox(form, 'in_shachris'),
+      in_misc: checkbox(form, 'in_misc'),
       start_date: optionalDate(form, 'start_date') ?? today(),
       gets_paid: checkbox(form, 'gets_paid'),
       monthly_amount_cents: monthlyAmount(form),
@@ -209,7 +211,8 @@ export async function deletePerson(id: string) {
 export async function addPersonToMorning(flag: MorningFlag, id: string) {
   const supabase = await supabaseServer();
   // Spelled out rather than a computed key: the Insert type rejects those.
-  const patch = flag === 'in_daf' ? { in_daf: true } : { in_shachris: true };
+  const patch =
+    flag === 'in_daf' ? { in_daf: true } : flag === 'in_shachris' ? { in_shachris: true } : { in_misc: true };
   const { error } = await supabase.from('people').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
   refreshEverything();
@@ -224,7 +227,11 @@ export async function createPersonForMorning(flag: MorningFlag, form: FormData) 
   const { error } = await supabase.from('people').insert({
     ...parts,
     role: role(form),
-    ...(flag === 'in_daf' ? { in_daf: true } : { in_shachris: true }),
+    ...(flag === 'in_daf'
+      ? { in_daf: true }
+      : flag === 'in_shachris'
+        ? { in_shachris: true }
+        : { in_misc: true }),
     in_night_seder: checkbox(form, 'in_night_seder'),
     start_date: today(),
   });

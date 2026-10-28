@@ -39,6 +39,7 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
     nightAttendance,
     dafAttendance,
     shachrisAttendance,
+    miscAttendance,
     entries,
     groups,
     membership,
@@ -51,6 +52,7 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
       getAllAttendance('night_attendance'),
       getAllAttendance('daf_attendance'),
       getAllAttendance('shachris_attendance'),
+      getAllAttendance('misc_attendance'),
       getCorrespondence(id),
       getGroups(),
       getGroupMembership(),
@@ -79,6 +81,8 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
   const nightByPerson = attendanceByPerson(nightAttendance).get(id);
   const dafByPerson = attendanceByPerson(dafAttendance).get(id);
   const shachrisByPerson = attendanceByPerson(shachrisAttendance).get(id);
+  // Misc is counted, not scored: nobody is expected, so there is no out-of.
+  const miscTimes = attendanceByPerson(miscAttendance).get(id)?.size ?? 0;
 
   const nightHeldAll = heldDates(nightAttendance);
   const dafHeldAll = heldDates(dafAttendance);
@@ -103,11 +107,16 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
     ...[...(nightByPerson ?? [])].map((date) => ({ date, program: 'Night' })),
     ...[...(dafByPerson ?? [])].map((date) => ({ date, program: 'Daf' })),
     ...[...(shachrisByPerson ?? [])].map((date) => ({ date, program: 'Shachris' })),
+    ...[...(attendanceByPerson(miscAttendance).get(id) ?? [])].map((date) => ({
+      date,
+      program: 'Misc',
+    })),
   ]
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
     .slice(0, 20);
 
   const hasHistory =
+    miscTimes > 0 ||
     (nightByPerson?.size ?? 0) > 0 ||
     (dafByPerson?.size ?? 0) > 0 ||
     (shachrisByPerson?.size ?? 0) > 0 ||
@@ -159,6 +168,14 @@ export default async function PersonPage(props: PageProps<'/more/people/[id]'>) 
               {shachrisStats.attended}/{shachrisStats.expected} · {shachrisStats.percent}%
             </span>
           </Row>
+          {person.in_misc || miscTimes > 0 ? (
+            <Row>
+              <span className="flex-1 text-[15px]">Misc</span>
+              <span className="text-[15px] tabular-nums text-ink-secondary">
+                {miscTimes === 1 ? 'Came once' : `Came ${miscTimes} times`}
+              </span>
+            </Row>
+          ) : null}
           {zman && person.in_night_seder ? (
             <Row>
               <span className="flex-1 text-[15px]">Chavrusa</span>

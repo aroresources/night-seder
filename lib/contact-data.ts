@@ -100,6 +100,7 @@ export async function loadContactData(): Promise<ContactData> {
       inNightSeder: person.in_night_seder,
       inDaf: person.in_daf,
       inShachris: person.in_shachris,
+      inMisc: person.in_misc,
       stillAttending: stillAttending(person, { night, daf, shachris }, reasons),
       snoozedUntil: person.snoozed_until,
       lastContact: latest
