@@ -10,6 +10,9 @@ import { supabaseAnonKey, supabaseUrl } from '@/lib/supabase/env';
  * In Next.js 16 this file is `proxy.ts`; it was called `middleware.ts` in
  * earlier versions, which is what the Supabase docs still show.
  */
+/** Readable signed out: the A2P campaign registration links to both. */
+const PUBLIC_PAGES = new Set(['/privacy', '/terms']);
+
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -41,6 +44,10 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const onLogin = pathname === '/login';
+
+  // The carriers require the privacy policy and terms to be readable by
+  // anyone, so they sit outside the sign-in wall. They hold no data.
+  if (PUBLIC_PAGES.has(pathname)) return response;
 
   if (!user && !onLogin) {
     const url = request.nextUrl.clone();
