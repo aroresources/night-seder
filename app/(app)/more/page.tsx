@@ -17,6 +17,7 @@ export default async function MorePage() {
           <LinkRow href="/more/zmanim">Zmanim</LinkRow>
           <LinkRow href="/more/payments">Payments</LinkRow>
           <LinkRow href="/more/messages">Messages</LinkRow>
+          <LinkRow href="/more/signups">Text signups</LinkRow>
           <LinkRow href="/more/morning-days-off">Morning days off</LinkRow>
           <LinkRow href="/more/settings">Settings</LinkRow>
         </Group>

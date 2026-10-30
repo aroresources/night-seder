@@ -11,7 +11,7 @@ import { supabaseAnonKey, supabaseUrl } from '@/lib/supabase/env';
  * earlier versions, which is what the Supabase docs still show.
  */
 /** Readable signed out: the A2P campaign registration links to both. */
-const PUBLIC_PAGES = new Set(['/privacy', '/terms']);
+const PUBLIC_PAGES = new Set(['/privacy', '/terms', '/texts']);
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });

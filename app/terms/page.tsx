@@ -41,7 +41,11 @@ export default function TermsPage() {
       <Section title="Stopping messages">
         <P>
           Reply STOP to any message and you will be removed at once and receive no further texts.
-          Reply HELP for help, or speak to the program coordinator at Ohr Mattisyahu.
+          Reply HELP for help, or write to{' '}
+          <a href="mailto:tzvir@ohrmattisyahu.com" className="text-accent underline">
+            tzvir@ohrmattisyahu.com
+          </a>
+          .
         </P>
       </Section>
 

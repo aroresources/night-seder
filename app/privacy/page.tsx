@@ -63,13 +63,18 @@ export default function PrivacyPage() {
 
       <Section title="How long we keep it">
         <P>
-          We keep attendance records for as long as the shul finds them useful. Ask the program
-          coordinator at Ohr Mattisyahu to remove your details and we will.
+          We keep attendance records for as long as the shul finds them useful. Ask us to remove
+          your details and we will.
         </P>
       </Section>
 
       <Section title="Questions">
-        <P>Speak to the program coordinator at Ohr Mattisyahu.</P>
+        <P>
+          Ohr Mattisyahu, 953 E. County Line Rd., Lakewood, NJ 08701.{' '}
+          <a href="mailto:tzvir@ohrmattisyahu.com" className="text-accent underline">
+            tzvir@ohrmattisyahu.com
+          </a>
+        </P>
       </Section>
     </Legal>
   );

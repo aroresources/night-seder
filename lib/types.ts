@@ -219,6 +219,24 @@ export type PersonFile = {
   size_bytes: number | null;
 };
 
+/**
+ * Someone who filled in the public form at /texts.
+ *
+ * It is a request, not a consent flag: it has to be matched to a man in the
+ * app before he is ticked for texts.
+ */
+export type SmsSignup = {
+  id: string;
+  created_at: string;
+  first_name: string | null;
+  last_name: string;
+  phone: string;
+  /** The exact words he agreed to. */
+  consent_text: string;
+  handled_at: string | null;
+  person_id: string | null;
+};
+
 /** Usually a Jewish month. Added by hand; `start_date` orders and names it. */
 export type PaymentPeriod = {
   id: string;
@@ -285,6 +303,7 @@ export type Database = {
       message_recipients: TableDef<MessageRecipient, 'message_id' | 'person_id' | 'status'>;
       person_groups: TableDef<PersonGroup, 'person_id' | 'group_id'>;
       person_files: TableDef<PersonFile, 'person_id' | 'path' | 'name'>;
+      sms_signups: TableDef<SmsSignup, 'last_name' | 'phone' | 'consent_text'>;
       payment_periods: TableDef<PaymentPeriod, 'name' | 'start_date' | 'end_date'>;
       payments: TableDef<Payment, 'period_id' | 'person_id' | 'amount_cents' | 'method'>;
       settings: TableDef<Settings, 'id'>;
