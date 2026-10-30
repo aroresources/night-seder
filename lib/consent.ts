@@ -8,6 +8,9 @@
  * Changing this changes what future signups agreed to, never what past ones
  * did: each row keeps its own copy.
  */
+/** The shul's Twilio number, as a man would read it off a sign. */
+export const SHUL_SMS_NUMBER = '(626) 613-6288';
+
 export const CONSENT_TEXT =
   'I agree to receive text messages from Ohr Mattisyahu about night seder and ' +
   'morning learning: reminders of start times, notice when a session is cancelled ' +

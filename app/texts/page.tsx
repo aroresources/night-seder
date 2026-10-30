@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { CONSENT_TEXT } from '@/lib/consent';
+import { CONSENT_TEXT, SHUL_SMS_NUMBER } from '@/lib/consent';
 import { TextSignupForm } from '@/components/text-signup-form';
 
 export const metadata: Metadata = {
@@ -26,10 +26,23 @@ export default function TextsPage() {
       </p>
 
       <p className="mt-6 text-[16px] leading-relaxed">
-        Put your mobile number in below and we&apos;ll text you about night seder and the morning
-        learning — what time things start, when a seder is cancelled or moved, and the occasional
-        announcement.
+        We&apos;ll text you about night seder and the morning learning — what time things start,
+        when a seder is cancelled or moved, and the occasional announcement.
       </p>
+
+      <div className="mt-6 rounded-xl bg-surface p-5">
+        <p className="text-[15px] text-ink-secondary">To join, text</p>
+        <p className="mt-1 text-[28px] font-semibold tracking-tight">JOIN</p>
+        <p className="mt-1 text-[15px] text-ink-secondary">
+          to{' '}
+          <a href={`sms:+1${SHUL_SMS_NUMBER.replace(/D/g, '')}&body=JOIN`} className="text-accent">
+            {SHUL_SMS_NUMBER}
+          </a>
+        </p>
+        <p className="mt-3 text-[15px] text-ink-secondary">
+          You&apos;ll get a message back confirming you&apos;re on the list.
+        </p>
+      </div>
 
       <ul className="mt-4 list-disc pl-5 text-[16px] leading-relaxed text-ink-secondary">
         <li>Usually fewer than four messages a month.</li>
@@ -37,6 +50,11 @@ export default function TextsPage() {
         <li>Reply STOP to any message to stop. Reply HELP for help.</li>
         <li>Learning with us doesn&apos;t depend on this — plenty prefer the WhatsApp group.</li>
       </ul>
+
+      <h2 className="mt-9 text-[19px] font-semibold">Or leave your number here</h2>
+      <p className="mt-1 text-[15px] text-ink-secondary">
+        If you&apos;d rather not text, fill this in instead.
+      </p>
 
       <TextSignupForm consentText={CONSENT_TEXT} />
 
