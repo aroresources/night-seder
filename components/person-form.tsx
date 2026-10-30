@@ -76,6 +76,21 @@ export function PersonForm({
             />
           </label>
 
+          <label className="flex min-h-[2.75rem] items-center gap-3 px-4 py-2.5">
+            <input
+              type="checkbox"
+              name="sms_opt_in"
+              defaultChecked={person ? person.sms_opt_in : false}
+              className="h-5 w-5 accent-[var(--accent)]"
+            />
+            <span className="flex-1 text-[17px]">
+              Gets text messages
+              <span className="mt-0.5 block text-[13px] text-ink-tertiary">
+                Only tick this once he has said yes. Most of the chabura prefer WhatsApp.
+              </span>
+            </span>
+          </label>
+
           <label className="block px-4 py-2.5">
             <span className="mb-1 block text-[13px] text-ink-secondary">Email (optional)</span>
             <input

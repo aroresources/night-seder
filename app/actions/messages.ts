@@ -106,6 +106,20 @@ export async function sendBroadcast(form: FormData): Promise<SendOutcome> {
       continue;
     }
 
+    // Having his number is not permission to use it.
+    if (!person.sms_opt_in) {
+      outcome.skipped += 1;
+      outcome.problems.push({ name: person.name, reason: 'Has not agreed to texts' });
+      rows.push({
+        message_id: message.id,
+        person_id: person.id,
+        phone,
+        status: 'skipped',
+        error: 'not opted in',
+      });
+      continue;
+    }
+
     if (!phone) {
       outcome.skipped += 1;
       outcome.problems.push({

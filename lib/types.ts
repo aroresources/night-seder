@@ -65,6 +65,13 @@ export type Person = {
   photo_path: string | null;
   /** He replied STOP. Set by the app when Twilio says so; never guessed. */
   sms_opt_out: boolean;
+  /**
+   * He has agreed to be texted. Having his number is not permission: most of
+   * the chabura would rather have WhatsApp.
+   */
+  sms_opt_in: boolean;
+  /** When he agreed. Kept by a database trigger, never written by hand. */
+  sms_opt_in_at: string | null;
   birthday: CalendarDate | null;
   notes: string | null;
   active: boolean;

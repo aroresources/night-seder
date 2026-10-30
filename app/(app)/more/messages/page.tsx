@@ -23,6 +23,8 @@ export default async function MessagesPage() {
       inNight: person.in_night_seder,
       inDaf: person.in_daf,
       inShachris: person.in_shachris,
+      inMisc: person.in_misc,
+      optedIn: person.sms_opt_in,
       optedOut: person.sms_opt_out,
       groupIds: membership.get(person.id) ?? [],
     }));

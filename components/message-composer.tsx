@@ -18,6 +18,9 @@ export interface Recipient {
   inNight: boolean;
   inDaf: boolean;
   inShachris: boolean;
+  inMisc: boolean;
+  /** He has agreed to be texted. Without it nothing is sent to him. */
+  optedIn: boolean;
   optedOut: boolean;
   groupIds: string[];
 }
@@ -51,6 +54,8 @@ export function MessageComposer({
           return person.inDaf;
         case 'shachris':
           return person.inShachris;
+        case 'misc':
+          return person.inMisc;
         case 'group':
           return person.groupIds.includes(groupId);
         default:
@@ -59,12 +64,14 @@ export function MessageComposer({
     });
   }, [recipients, audience, groupId]);
 
-  const willReceive = chosen.filter((p) => !p.optedOut && isSendable(p.phone));
+  const willReceive = chosen.filter((p) => p.optedIn && !p.optedOut && isSendable(p.phone));
   const optedOut = chosen.filter((p) => p.optedOut);
+  // He never agreed, which is not the same as having asked to stop.
+  const notOptedIn = chosen.filter((p) => !p.optedOut && !p.optedIn);
   // Worth telling apart: one is data to collect, the other is a number to fix.
-  const noNumber = chosen.filter((p) => !p.optedOut && !p.phone?.trim());
+  const noNumber = chosen.filter((p) => p.optedIn && !p.optedOut && !p.phone?.trim());
   const unreadable = chosen.filter(
-    (p) => !p.optedOut && Boolean(p.phone?.trim()) && !isSendable(p.phone),
+    (p) => p.optedIn && !p.optedOut && Boolean(p.phone?.trim()) && !isSendable(p.phone),
   );
 
   const outgoing = composeBody(body, optOutLine);
@@ -78,6 +85,8 @@ export function MessageComposer({
           ? 'Daf'
           : audience === 'shachris'
             ? 'Shachris'
+            : audience === 'misc'
+              ? 'Misc'
             : 'Everyone';
 
   function send() {
@@ -154,6 +163,7 @@ export function MessageComposer({
                 ['night', 'Night seder'],
                 ['daf', 'Daf'],
                 ['shachris', 'Shachris'],
+                ['misc', 'Misc'],
                 ['all', 'Everyone'],
                 ...(groups.length > 0 ? ([['group', 'A group']] as [string, string][]) : []),
               ] as [string, string][]
@@ -227,6 +237,13 @@ export function MessageComposer({
           <p className="text-[15px] text-ink">
             {willReceive.length} {willReceive.length === 1 ? 'man' : 'men'} will get this
           </p>
+          {notOptedIn.length > 0 ? (
+            <p className="mt-1 text-[13px] text-ink-tertiary">
+              {notOptedIn.length} {notOptedIn.length === 1 ? 'has' : 'have'} not agreed to texts,
+              so {notOptedIn.length === 1 ? 'he is' : 'they are'} left out. Tick &ldquo;Gets text
+              messages&rdquo; on a man&apos;s page once he has said yes.
+            </p>
+          ) : null}
           {noNumber.length > 0 ? (
             <p className="mt-1">
               {noNumber.length} have no phone number at all
