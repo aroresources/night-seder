@@ -6,7 +6,7 @@ import { useMemo, useState, useTransition } from 'react';
 
 import { snoozeForDays } from '@/app/actions/contact';
 import { setTrackContact } from '@/app/actions/people';
-import type { Reason } from '@/lib/contact';
+import { byLeastRecentlyContacted, type Reason } from '@/lib/contact';
 import { formatShortDate } from '@/lib/dates';
 import { channelLabel, type Channel, type Group, type Role } from '@/lib/types';
 
@@ -31,6 +31,12 @@ export interface ContactRow {
   snoozedUntil: string | null;
   lastContact: { date: string; channel: Channel; note: string | null } | null;
   reasons: Reason[];
+  /** The last time he turned up to anything he is in. */
+  lastAttended: string | null;
+  /** The longest he has gone without turning up to something he is in. */
+  worstStreak: number;
+  /** Spoken to since the last time he came. */
+  chased: boolean;
   group: 'needs_attention' | 'everyone_else' | 'snoozed';
   /** The ids of the topic groups he is tagged with. */
   groupIds: string[];
@@ -43,6 +49,7 @@ type Filter =
   | 'shachris'
   | 'misc'
   | 'none'
+  | 'unchased'
   | 'rabbi'
   | 'working'
   | 'hidden';
@@ -54,6 +61,7 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'shachris', label: 'Shachris' },
   { value: 'misc', label: 'Misc' },
   { value: 'none', label: 'Not in any' },
+  { value: 'unchased', label: 'Not chased' },
   { value: 'rabbi', label: 'Rabbis' },
   { value: 'working', label: 'Working' },
   { value: 'hidden', label: 'Hidden' },
@@ -70,6 +78,10 @@ function matchesFilter(row: ContactRow, filter: Filter): boolean {
       return row.inShachris;
     case 'misc':
       return row.inMisc;
+    // Whatever the last conversation was about, it was not about this stretch
+    // of missing: it happened before he was last seen.
+    case 'unchased':
+      return !row.chased;
     // The men nobody takes attendance for. They can never be flagged for a
     // missed session, so this is the list you work through by last contact.
     case 'none':
@@ -83,8 +95,35 @@ function matchesFilter(row: ContactRow, filter: Filter): boolean {
   }
 }
 
+type Sort = 'name' | 'contact' | 'missed';
+
+const SORTS: { value: Sort; label: string }[] = [
+  { value: 'name', label: 'Name' },
+  { value: 'contact', label: 'Last contact' },
+  { value: 'missed', label: 'Missed' },
+];
+
+/**
+ * The rows come in surname order. Sorting is picked rather than imposed, and
+ * never by last contact unless asked for: a list that reshuffles because you
+ * logged a call loses your place in it.
+ */
+function sortRows(rows: ContactRow[], sort: Sort): ContactRow[] {
+  if (sort === 'name') return rows;
+  if (sort === 'missed') {
+    return [...rows].sort((a, b) => b.worstStreak - a.worstStreak || a.name.localeCompare(b.name));
+  }
+  return [...rows].sort((a, b) =>
+    byLeastRecentlyContacted(
+      { lastContact: a.lastContact?.date ?? null, name: a.name },
+      { lastContact: b.lastContact?.date ?? null, name: b.name },
+    ),
+  );
+}
+
 export function ContactList({ rows, groups }: { rows: ContactRow[]; groups: Group[] }) {
   const [filter, setFilter] = useState<Filter>('all');
+  const [sort, setSort] = useState<Sort>('name');
   const [topic, setTopic] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [showSnoozed, setShowSnoozed] = useState(false);
@@ -100,9 +139,18 @@ export function ContactList({ rows, groups }: { rows: ContactRow[]; groups: Grou
     });
   }, [rows, filter, topic, search]);
 
-  const needsAttention = visible.filter((row) => row.group === 'needs_attention');
-  const everyoneElse = visible.filter((row) => row.group === 'everyone_else');
-  const snoozed = visible.filter((row) => row.group === 'snoozed');
+  const needsAttention = sortRows(
+    visible.filter((row) => row.group === 'needs_attention'),
+    sort,
+  );
+  const everyoneElse = sortRows(
+    visible.filter((row) => row.group === 'everyone_else'),
+    sort,
+  );
+  const snoozed = sortRows(
+    visible.filter((row) => row.group === 'snoozed'),
+    sort,
+  );
 
   return (
     <div>
@@ -142,6 +190,31 @@ export function ContactList({ rows, groups }: { rows: ContactRow[]; groups: Grou
               </button>
             ))}
           </div>
+        ) : null}
+
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          <span className="shrink-0 self-center pr-1 text-[13px] text-ink-tertiary">Sort by</span>
+          {SORTS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setSort(option.value)}
+              aria-pressed={sort === option.value}
+              className={`min-h-[2.25rem] shrink-0 rounded-full px-3 text-[15px] ${
+                sort === option.value
+                  ? 'bg-accent text-on-accent'
+                  : 'bg-surface text-ink-secondary'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        {filter === 'unchased' ? (
+          <p className="pb-2 text-[13px] text-ink-tertiary">
+            Men you haven&apos;t spoken to since the last time they came.
+          </p>
         ) : null}
 
         <input

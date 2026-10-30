@@ -3,11 +3,13 @@ import 'server-only';
 import type { ContactRow } from '@/components/contact-list';
 import { streaksForAll, type PersonWindow, type StreakSummary } from '@/lib/attendance';
 import {
-  byLeastRecentlyContacted,
+  contactedSinceLastSeen,
   contactReasons,
   groupFor,
+  mostRecent,
   stillAttending,
 } from '@/lib/contact';
+import { compareByName } from '@/lib/names';
 import { today } from '@/lib/dates';
 import {
   getAllAttendance,
@@ -42,6 +44,7 @@ export async function loadContactData(): Promise<ContactData> {
     nightAttendance,
     dafAttendance,
     shachrisAttendance,
+    miscAttendance,
     correspondence,
     groups,
     membership,
@@ -52,6 +55,7 @@ export async function loadContactData(): Promise<ContactData> {
       getAllAttendance('night_attendance'),
       getAllAttendance('daf_attendance'),
       getAllAttendance('shachris_attendance'),
+      getAllAttendance('misc_attendance'),
       getCorrespondence(),
       getGroups(),
       getGroupMembership(),
@@ -66,6 +70,9 @@ export async function loadContactData(): Promise<ContactData> {
   const nightStreaks = streaksForAll(windows, nightAttendance);
   const dafStreaks = streaksForAll(windows, dafAttendance);
   const shachrisStreaks = streaksForAll(windows, shachrisAttendance);
+  // Misc never flags anybody, but a morning he turned up to is still the last
+  // time he was seen.
+  const miscStreaks = streaksForAll(windows, miscAttendance);
 
   const entriesByPerson = new Map<string, Correspondence[]>();
   for (const entry of correspondence) {
@@ -73,6 +80,8 @@ export async function loadContactData(): Promise<ContactData> {
     if (existing) existing.push(entry);
     else entriesByPerson.set(entry.person_id, [entry]);
   }
+
+  const peopleById = new Map(people.map((person) => [person.id, person]));
 
   const now = today();
   const thresholds = {
@@ -87,7 +96,17 @@ export async function loadContactData(): Promise<ContactData> {
     const night = nightStreaks.get(person.id) ?? NO_STREAK;
     const daf = dafStreaks.get(person.id) ?? NO_STREAK;
     const shachris = shachrisStreaks.get(person.id) ?? NO_STREAK;
+    const misc = miscStreaks.get(person.id) ?? NO_STREAK;
     const reasons = contactReasons(person, { night, daf, shachris }, latest, thresholds, now);
+
+    // Only the programmes he is actually in: a Daf date for a man who is not
+    // in Daf would read as him having been seen when he was not expected.
+    const lastAttended = mostRecent([
+      person.in_night_seder ? night.lastAttended : null,
+      person.in_daf ? daf.lastAttended : null,
+      person.in_shachris ? shachris.lastAttended : null,
+      person.in_misc ? misc.lastAttended : null,
+    ]);
 
     return {
       id: person.id,
@@ -107,33 +126,23 @@ export async function loadContactData(): Promise<ContactData> {
         ? { date: latest.date, channel: latest.channel, note: latest.note }
         : null,
       reasons,
+      lastAttended,
+      // The longest he has gone without turning up to something he is in.
+      worstStreak: Math.max(
+        person.in_night_seder ? night.streak : 0,
+        person.in_daf ? daf.streak : 0,
+        person.in_shachris ? shachris.streak : 0,
+      ),
+      chased: contactedSinceLastSeen(latest?.date ?? null, lastAttended),
       group: groupFor(person, reasons, now),
       groupIds: membership.get(person.id) ?? [],
     };
   });
 
-  // Needs attention leads with the longest absence; everyone else leads with
-  // whoever has gone longest without hearing from me.
-  const groupRank = { needs_attention: 0, everyone_else: 1, snoozed: 2 } as const;
-  // A missed streak outranks a follow-up: he isn't coming, which is the thing
-  // a phone call is actually for.
-  const severity = (row: ContactRow) =>
-    Math.max(0, ...row.reasons.map((r) => (r.kind === 'follow_up' ? 1 : 2)));
-
-  rows.sort((a, b) => {
-    const byGroup = groupRank[a.group] - groupRank[b.group];
-    if (byGroup !== 0) return byGroup;
-
-    if (a.group === 'needs_attention') {
-      const bySeverity = severity(b) - severity(a);
-      if (bySeverity !== 0) return bySeverity;
-    }
-
-    return byLeastRecentlyContacted(
-      { lastContact: a.lastContact?.date ?? null, name: a.name },
-      { lastContact: b.lastContact?.date ?? null, name: b.name },
-    );
-  });
+  // Surname order, like every other list in the app. The screen re-sorts to
+  // whatever was picked; what it must not do is reorder itself because you
+  // logged a call, which is what sorting by last contact here used to do.
+  rows.sort((a, b) => compareByName(peopleById.get(a.id)!, peopleById.get(b.id)!));
 
   return { rows, groups, settings, entriesByPerson, people };
 }

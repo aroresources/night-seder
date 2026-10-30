@@ -165,6 +165,30 @@ export function groupFor(
 }
 
 /**
+ * Has he been spoken to since the last time he turned up?
+ *
+ * If the last conversation predates the last time he came, then whatever it
+ * was about, it was not about this stretch of missing — so he has not been
+ * chased on it. Never contacted is never chased.
+ *
+ * A man who has never once attended is a different case: there is no "since"
+ * to be on the wrong side of, so any conversation at all counts.
+ */
+export function contactedSinceLastSeen(
+  lastContact: CalendarDate | null,
+  lastAttended: CalendarDate | null,
+): boolean {
+  if (lastContact === null) return false;
+  if (lastAttended === null) return true;
+  return lastContact >= lastAttended;
+}
+
+/** The most recent of several, ignoring the ones that never happened. */
+export function mostRecent(dates: (CalendarDate | null)[]): CalendarDate | null {
+  return dates.filter((date): date is CalendarDate => date !== null).sort().at(-1) ?? null;
+}
+
+/**
  * Least recently contacted first: never contacted, then oldest last contact.
  * Names break ties so the order is stable between renders.
  */

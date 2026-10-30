@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 
 import {
   byLeastRecentlyContacted,
+  contactedSinceLastSeen,
   contactReasons,
+  mostRecent,
   groupFor,
   isSnoozed,
   stillAttending,
@@ -300,4 +302,28 @@ test('two programmes still being attended are both named', () => {
     stillAttending(him, his, reasons),
     'Was at Night seder Sep 16, 2026, Daf Sep 15, 2026',
   );
+});
+
+test('never contacted is never chased', () => {
+  assert.equal(contactedSinceLastSeen(null, '2026-09-16'), false);
+  assert.equal(contactedSinceLastSeen(null, null), false);
+});
+
+test('a conversation before he was last seen has not chased this absence', () => {
+  assert.equal(contactedSinceLastSeen('2026-09-10', '2026-09-16'), false);
+});
+
+test('a conversation on or after the day he came counts', () => {
+  assert.equal(contactedSinceLastSeen('2026-09-16', '2026-09-16'), true, 'the same day counts');
+  assert.equal(contactedSinceLastSeen('2026-09-17', '2026-09-16'), true);
+});
+
+test('a man who has never attended has no "since" to be on the wrong side of', () => {
+  assert.equal(contactedSinceLastSeen('2026-09-10', null), true);
+});
+
+test('the most recent of several dates ignores the ones that never happened', () => {
+  assert.equal(mostRecent([null, '2026-09-10', null, '2026-09-16']), '2026-09-16');
+  assert.equal(mostRecent([null, null]), null);
+  assert.equal(mostRecent([]), null);
 });
