@@ -5,13 +5,20 @@ import { Group, Row, ScreenHeader } from '@/components/ui';
 import { formatShortDate } from '@/lib/dates';
 import { getGroupMembership, getGroups, getMessages, getPeople } from '@/lib/queries';
 import { smsConfigured } from '@/lib/sms';
+import { supabaseServer } from '@/lib/supabase/server';
 
 export default async function MessagesPage() {
-  const [people, groups, membership, history] = await Promise.all([
+  const supabase = await supabaseServer();
+  const [people, groups, membership, history, { count: unnamed }] = await Promise.all([
     getPeople(),
     getGroups(),
     getGroupMembership(),
     getMessages(),
+    supabase
+      .from('sms_signups')
+      .select('id', { count: 'exact', head: true })
+      .eq('subscribed', true)
+      .eq('opted_out', false),
   ]);
 
   const recipients: Recipient[] = people
@@ -42,6 +49,7 @@ export default async function MessagesPage() {
           recipients={recipients}
           groups={groups}
           configured={smsConfigured()}
+          unnamed={unnamed ?? 0}
         />
 
         <Group title="Sent">

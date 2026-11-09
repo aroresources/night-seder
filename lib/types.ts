@@ -183,7 +183,9 @@ export type MessageRecipient = {
   id: string;
   created_at: string;
   message_id: string;
-  person_id: string;
+  /** Exactly one of these is set: a man, or a number with no name. */
+  person_id: string | null;
+  signup_id: string | null;
   phone: string | null;
   status: 'sent' | 'failed' | 'skipped';
   error: string | null;
@@ -235,6 +237,12 @@ export type SmsSignup = {
   consent_text: string;
   handled_at: string | null;
   person_id: string | null;
+  /** Getting texts in his own right, without being matched to a man. */
+  subscribed: boolean;
+  /** Stamped by the database, so it is true however the row was changed. */
+  subscribed_at: string | null;
+  /** He texted STOP. Not the same as never having started. */
+  opted_out: boolean;
 };
 
 /** Usually a Jewish month. Added by hand; `start_date` orders and names it. */
@@ -300,7 +308,7 @@ export type Database = {
       correspondence: TableDef<Correspondence, 'person_id' | 'channel'>;
       groups: TableDef<Group, 'name'>;
       messages: TableDef<Message, 'body'>;
-      message_recipients: TableDef<MessageRecipient, 'message_id' | 'person_id' | 'status'>;
+      message_recipients: TableDef<MessageRecipient, 'message_id' | 'status'>;
       person_groups: TableDef<PersonGroup, 'person_id' | 'group_id'>;
       person_files: TableDef<PersonFile, 'person_id' | 'path' | 'name'>;
       sms_signups: TableDef<SmsSignup, 'last_name' | 'phone' | 'consent_text'>;

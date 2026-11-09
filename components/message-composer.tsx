@@ -29,11 +29,14 @@ export function MessageComposer({
   recipients,
   groups,
   configured,
+  unnamed,
 }: {
   recipients: Recipient[];
   groups: Group[];
   /** False until the Twilio keys are in place. */
   configured: boolean;
+  /** Numbers on the list with nobody’s name against them. Everyone only. */
+  unnamed: number;
 }) {
   const [audience, setAudience] = useState('night');
   const [groupId, setGroupId] = useState(groups[0]?.id ?? '');
@@ -65,6 +68,9 @@ export function MessageComposer({
   }, [recipients, audience, groupId]);
 
   const willReceive = chosen.filter((p) => p.optedIn && !p.optedOut && isSendable(p.phone));
+  // They are on no programme, so they only hear an announcement to everybody.
+  const alsoUnnamed = audience === 'all' ? unnamed : 0;
+  const total = willReceive.length + alsoUnnamed;
   const optedOut = chosen.filter((p) => p.optedOut);
   // He never agreed, which is not the same as having asked to stop.
   const notOptedIn = chosen.filter((p) => !p.optedOut && !p.optedIn);
@@ -235,8 +241,15 @@ export function MessageComposer({
 
         <div className="rounded-lg bg-canvas px-3 py-2 text-[13px] text-ink-secondary">
           <p className="text-[15px] text-ink">
-            {willReceive.length} {willReceive.length === 1 ? 'man' : 'men'} will get this
+            {total} {total === 1 ? 'text' : 'texts'} will go out
           </p>
+          {alsoUnnamed > 0 ? (
+            <p className="mt-1 text-[13px] text-ink-tertiary">
+              {willReceive.length} {willReceive.length === 1 ? 'man' : 'men'}, plus{' '}
+              {alsoUnnamed} {alsoUnnamed === 1 ? 'number' : 'numbers'} with no name against{' '}
+              {alsoUnnamed === 1 ? 'it' : 'them'}.
+            </p>
+          ) : null}
           {notOptedIn.length > 0 ? (
             <p className="mt-1 text-[13px] text-ink-tertiary">
               {notOptedIn.length} {notOptedIn.length === 1 ? 'has' : 'have'} not agreed to texts,

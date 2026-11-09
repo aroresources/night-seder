@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { composeBody } from '@/lib/message-text';
-import { toE164 } from '@/lib/phone';
+import { formatForDisplay, toE164 } from '@/lib/phone';
 import { OPTED_OUT, sendSms, smsConfigured } from '@/lib/sms';
 import { supabaseServer } from '@/lib/supabase/server';
 import type { Person } from '@/lib/types';
@@ -71,7 +71,22 @@ export async function sendBroadcast(form: FormData): Promise<SendOutcome> {
   }
 
   const recipients = pickRecipients(people, audience, inGroup);
-  if (recipients.length === 0) throw new Error('Nobody matches that');
+
+  // Numbers that are on the list in their own right, with nobody's name
+  // against them. Only on "Everyone": the programme lists are lists of men,
+  // and a bare number is on none of them.
+  let subscribers: { id: string; phone: string }[] = [];
+  if (audience === 'all') {
+    const { data, error } = await supabase
+      .from('sms_signups')
+      .select('id, phone')
+      .eq('subscribed', true)
+      .eq('opted_out', false);
+    if (error) throw new Error(error.message);
+    subscribers = data;
+  }
+
+  if (recipients.length + subscribers.length === 0) throw new Error('Nobody matches that');
 
   const { data: message, error: messageError } = await supabase
     .from('messages')
@@ -83,12 +98,14 @@ export async function sendBroadcast(form: FormData): Promise<SendOutcome> {
   const outcome: SendOutcome = { sent: 0, failed: 0, skipped: 0, problems: [] };
   const rows: {
     message_id: string;
-    person_id: string;
+    person_id?: string;
+    signup_id?: string;
     phone: string | null;
     status: 'sent' | 'failed' | 'skipped';
     error: string | null;
   }[] = [];
   const nowOptedOut: string[] = [];
+  const signupsNowOptedOut: string[] = [];
 
   for (const person of recipients) {
     const phone = toE164(person.phone);
@@ -161,11 +178,59 @@ export async function sendBroadcast(form: FormData): Promise<SendOutcome> {
     }
   }
 
+  // The same again for numbers nobody has named. Their consent is recorded
+  // against the number, so they are sent to on exactly the same terms; they
+  // are only told apart here because there is no name to put in the report.
+  for (const subscriber of subscribers) {
+    const phone = toE164(subscriber.phone);
+    const label = phone ? formatForDisplay(phone) : subscriber.phone;
+
+    if (!phone) {
+      outcome.skipped += 1;
+      outcome.problems.push({ name: label, reason: `Can't read "${subscriber.phone}"` });
+      rows.push({
+        message_id: message.id,
+        signup_id: subscriber.id,
+        phone: null,
+        status: 'skipped',
+        error: 'no usable number',
+      });
+      continue;
+    }
+
+    const result = await sendSms(phone, body);
+    if (result.ok) {
+      outcome.sent += 1;
+      rows.push({
+        message_id: message.id,
+        signup_id: subscriber.id,
+        phone,
+        status: 'sent',
+        error: null,
+      });
+    } else {
+      outcome.failed += 1;
+      outcome.problems.push({ name: label, reason: result.error ?? 'Failed' });
+      rows.push({
+        message_id: message.id,
+        signup_id: subscriber.id,
+        phone,
+        status: 'failed',
+        error: result.error ?? null,
+      });
+      if (result.code === OPTED_OUT) signupsNowOptedOut.push(subscriber.id);
+    }
+  }
+
   const { error: rowsError } = await supabase.from('message_recipients').insert(rows);
   if (rowsError) throw new Error(rowsError.message);
 
   if (nowOptedOut.length > 0) {
     await supabase.from('people').update({ sms_opt_out: true }).in('id', nowOptedOut);
+  }
+
+  if (signupsNowOptedOut.length > 0) {
+    await supabase.from('sms_signups').update({ opted_out: true }).in('id', signupsNowOptedOut);
   }
 
   revalidatePath('/', 'layout');

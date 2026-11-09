@@ -100,6 +100,14 @@ export async function POST(request: NextRequest) {
         );
       if (stopError) throw new Error(stopError.message);
     }
+    // A number with no name can be on the list too, so it has to be able to
+    // come off it. The trigger ends the subscription when opted_out goes true.
+    const { error: signupStopError } = await supabase
+      .from('sms_signups')
+      .update({ opted_out: true })
+      .eq('phone', from);
+    if (signupStopError) throw new Error(signupStopError.message);
+
     // Twilio blocks him at its end regardless; this is so the app agrees.
     return twiml(LEFT);
   }
@@ -116,13 +124,33 @@ export async function POST(request: NextRequest) {
     return twiml(JOINED);
   }
 
-  // A number we don't hold. Recorded for matching rather than dropped: it
-  // is somebody who asked to be on the list.
-  const { error: signupError } = await supabase.from('sms_signups').insert({
-    last_name: 'Texted JOIN',
-    phone: from,
-    consent_text: `Texted "${(params.Body ?? '').trim().slice(0, 60)}" to the shul's number`,
-  });
+  // A number we don't hold. Recorded rather than dropped: it is somebody who
+  // asked to be on the list, and he can be given the texts as a bare number
+  // even if nobody ever puts a name to him.
+  const consent = `Texted "${(params.Body ?? '').trim().slice(0, 60)}" to the shul's number`;
+
+  // He may have texted before. Reuse that row rather than stacking up a new
+  // one each time, and bring it back into view: if he had asked to stop, this
+  // is him changing his mind, which you should see rather than have applied
+  // behind your back.
+  const { data: already, error: lookupError } = await supabase
+    .from('sms_signups')
+    .select('id')
+    .eq('phone', from)
+    .limit(1);
+  if (lookupError) throw new Error(lookupError.message);
+
+  const { error: signupError } =
+    already && already.length > 0
+      ? await supabase
+          .from('sms_signups')
+          .update({ opted_out: false, handled_at: null, consent_text: consent })
+          .eq('id', already[0].id)
+      : await supabase.from('sms_signups').insert({
+          last_name: 'Texted JOIN',
+          phone: from,
+          consent_text: consent,
+        });
   if (signupError) throw new Error(signupError.message);
 
   return twiml(NOTED);
