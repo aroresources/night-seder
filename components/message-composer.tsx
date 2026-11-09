@@ -36,13 +36,16 @@ export function MessageComposer({
   /** False until the Twilio keys are in place. */
   configured: boolean;
   /** Numbers on the list with nobody’s name against them. Everyone only. */
-  unnamed: number;
+  unnamed: string[];
 }) {
   const [audience, setAudience] = useState('night');
   const [groupId, setGroupId] = useState(groups[0]?.id ?? '');
   const [body, setBody] = useState('');
   const [optOutLine, setOptOutLine] = useState(true);
   const [confirming, setConfirming] = useState(false);
+  // Collapsed by default: "Everyone" is two hundred names, and the count is
+  // the answer most of the time.
+  const [showing, setShowing] = useState(false);
   const [outcome, setOutcome] = useState<SendOutcome | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
@@ -69,8 +72,8 @@ export function MessageComposer({
 
   const willReceive = chosen.filter((p) => p.optedIn && !p.optedOut && isSendable(p.phone));
   // They are on no programme, so they only hear an announcement to everybody.
-  const alsoUnnamed = audience === 'all' ? unnamed : 0;
-  const total = willReceive.length + alsoUnnamed;
+  const alsoUnnamed = audience === 'all' ? unnamed : [];
+  const total = willReceive.length + alsoUnnamed.length;
   const optedOut = chosen.filter((p) => p.optedOut);
   // He never agreed, which is not the same as having asked to stop.
   const notOptedIn = chosen.filter((p) => !p.optedOut && !p.optedIn);
@@ -243,11 +246,11 @@ export function MessageComposer({
           <p className="text-[15px] text-ink">
             {total} {total === 1 ? 'text' : 'texts'} will go out
           </p>
-          {alsoUnnamed > 0 ? (
+          {alsoUnnamed.length > 0 ? (
             <p className="mt-1 text-[13px] text-ink-tertiary">
               {willReceive.length} {willReceive.length === 1 ? 'man' : 'men'}, plus{' '}
-              {alsoUnnamed} {alsoUnnamed === 1 ? 'number' : 'numbers'} with no name against{' '}
-              {alsoUnnamed === 1 ? 'it' : 'them'}.
+              {alsoUnnamed.length} {alsoUnnamed.length === 1 ? 'number' : 'numbers'} with no
+              name against {alsoUnnamed.length === 1 ? 'it' : 'them'}.
             </p>
           ) : null}
           {notOptedIn.length > 0 ? (
@@ -268,6 +271,33 @@ export function MessageComposer({
               {unreadable.length} have a number I can&apos;t read:{' '}
               {unreadable.map((p) => `${p.name} (${p.phone})`).join(', ')}
             </p>
+          ) : null}
+          {total > 0 ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowing((on) => !on)}
+                aria-expanded={showing}
+                className="mt-2 min-h-[2.75rem] text-[13px] text-accent"
+              >
+                {showing ? 'Hide who gets it' : 'Show who gets it'}
+              </button>
+              {showing ? (
+                <ul className="mb-1 divide-y divide-hairline border-t border-hairline">
+                  {willReceive.map((person) => (
+                    <li key={person.id} className="flex items-baseline gap-2 py-1.5 text-[13px]">
+                      <span className="min-w-0 flex-1 truncate text-ink">{person.name}</span>
+                    </li>
+                  ))}
+                  {alsoUnnamed.map((number) => (
+                    <li key={number} className="flex items-baseline gap-2 py-1.5 text-[13px]">
+                      <span className="min-w-0 flex-1 truncate text-ink">{number}</span>
+                      <span className="shrink-0 text-ink-tertiary">no name</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </>
           ) : null}
           {optedOut.length > 0 ? (
             <p className="mt-1">

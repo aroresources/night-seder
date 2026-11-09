@@ -1,5 +1,5 @@
 import { SignupList, SubscribedList, type SignupRow } from '@/components/signup-list';
-import { Empty, ScreenHeader } from '@/components/ui';
+import { Empty, Group, LinkRow, Row, ScreenHeader } from '@/components/ui';
 import { formatForDisplay, toE164 } from '@/lib/phone';
 import { getPeople } from '@/lib/queries';
 import { supabaseServer } from '@/lib/supabase/server';
@@ -58,14 +58,34 @@ export default async function SignupsPage() {
   const subscribed = rows.filter((row) => row.subscribed);
   const justNames = people.map((p) => ({ id: p.id, name: p.name }));
 
+  // Who is actually on the list. The question "who gets a text if I send one
+  // now?" had no answer anywhere before this: ticks were scattered one per
+  // man across two hundred pages, so there was no way to see the whole list.
+  const onTheList = people
+    .filter((person) => person.active && person.sms_opt_in && !person.sms_opt_out)
+    .map((person) => {
+      const e164 = toE164(person.phone);
+      return {
+        id: person.id,
+        name: person.name,
+        phone: e164 ? formatForDisplay(e164) : (person.phone ?? ''),
+        // A tick is not a working number. Worth seeing here rather than
+        // discovering it in a send report.
+        unusable: !e164,
+      };
+    });
+
+  const askedToStop = people.filter((person) => person.active && person.sms_opt_out);
+  const total = onTheList.length + subscribed.length;
+
   return (
     <>
       <ScreenHeader
         title="Text signups"
         subtitle={
-          subscribed.length > 0
-            ? `${waiting.length} waiting · ${subscribed.length} unnamed`
-            : `${waiting.length} waiting`
+          waiting.length > 0
+            ? `${total} on the list · ${waiting.length} waiting`
+            : `${total} on the list`
         }
         back={{ href: '/more', label: 'More' }}
       />
@@ -84,6 +104,50 @@ export default async function SignupsPage() {
             ) : null}
           </>
         )}
+
+        <Group
+          title={`On the text list (${total})`}
+          footer="Everyone here gets a message sent to Everyone. Tap a man to untick him."
+        >
+          {total === 0 ? (
+            <Row>
+              <p className="text-[15px] text-ink-secondary">
+                Nobody yet. A man joins by texting JOIN to the shul&rsquo;s number.
+              </p>
+            </Row>
+          ) : (
+            <>
+              {onTheList.map((person) => (
+                <LinkRow
+                  key={person.id}
+                  href={`/more/people/${person.id}`}
+                  detail={person.unusable ? 'no usable number' : person.phone}
+                >
+                  <span className="truncate text-[15px]">{person.name}</span>
+                </LinkRow>
+              ))}
+              {subscribed.map((row) => (
+                <Row key={row.id}>
+                  <span className="min-w-0 flex-1 truncate text-[15px]">{row.phone}</span>
+                  <span className="shrink-0 text-[13px] text-ink-tertiary">no name</span>
+                </Row>
+              ))}
+            </>
+          )}
+        </Group>
+
+        {askedToStop.length > 0 ? (
+          <Group
+            title={`Asked to stop (${askedToStop.length})`}
+            footer="They replied STOP. Nothing is sent to them, and only they can undo it by texting JOIN."
+          >
+            {askedToStop.map((person) => (
+              <LinkRow key={person.id} href={`/more/people/${person.id}`}>
+                <span className="truncate text-[15px]">{person.name}</span>
+              </LinkRow>
+            ))}
+          </Group>
+        ) : null}
       </div>
     </>
   );

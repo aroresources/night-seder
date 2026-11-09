@@ -4,22 +4,29 @@ import { MessageComposer, type Recipient } from '@/components/message-composer';
 import { Group, Row, ScreenHeader } from '@/components/ui';
 import { formatShortDate } from '@/lib/dates';
 import { getGroupMembership, getGroups, getMessages, getPeople } from '@/lib/queries';
+import { formatForDisplay, toE164 } from '@/lib/phone';
 import { smsConfigured } from '@/lib/sms';
 import { supabaseServer } from '@/lib/supabase/server';
 
 export default async function MessagesPage() {
   const supabase = await supabaseServer();
-  const [people, groups, membership, history, { count: unnamed }] = await Promise.all([
+  const [people, groups, membership, history, { data: unnamedRows }] = await Promise.all([
     getPeople(),
     getGroups(),
     getGroupMembership(),
     getMessages(),
     supabase
       .from('sms_signups')
-      .select('id', { count: 'exact', head: true })
+      .select('phone')
       .eq('subscribed', true)
       .eq('opted_out', false),
   ]);
+
+  // Shown by number, because that is the whole of what is known about them.
+  const unnamed = (unnamedRows ?? []).map((row) => {
+    const e164 = toE164(row.phone);
+    return e164 ? formatForDisplay(e164) : row.phone;
+  });
 
   const recipients: Recipient[] = people
     .filter((person) => person.active)
@@ -49,7 +56,7 @@ export default async function MessagesPage() {
           recipients={recipients}
           groups={groups}
           configured={smsConfigured()}
-          unnamed={unnamed ?? 0}
+          unnamed={unnamed}
         />
 
         <Group title="Sent">
