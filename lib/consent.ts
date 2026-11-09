@@ -11,6 +11,20 @@
 /** The shul's Twilio number, as a man would read it off a sign. */
 export const SHUL_SMS_NUMBER = '(626) 613-6288';
 
+/**
+ * A link that opens his texting app with the number and the word already in.
+ *
+ * `?body=` rather than `&body=`: the ampersand form is an old iOS quirk, and
+ * Android ignores it. Tested rather than eyeballed, because a link that looks
+ * right and dials nothing is the worst kind of wrong — the page would still
+ * read perfectly while nobody could join.
+ */
+export function smsLink(number: string, body: string): string {
+  const digits = number.replace(/\D/g, '');
+  const e164 = digits.length === 10 ? `1${digits}` : digits;
+  return `sms:+${e164}?body=${encodeURIComponent(body)}`;
+}
+
 export const CONSENT_TEXT =
   'I agree to receive text messages from Ohr Mattisyahu about night seder and ' +
   'morning learning: reminders of start times, notice when a session is cancelled ' +

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { CONSENT_TEXT, SHUL_SMS_NUMBER } from '@/lib/consent';
+import { CONSENT_TEXT, SHUL_SMS_NUMBER, smsLink } from '@/lib/consent';
 import { TextSignupForm } from '@/components/text-signup-form';
 
 export const metadata: Metadata = {
@@ -35,7 +35,7 @@ export default function TextsPage() {
         <p className="mt-1 text-[28px] font-semibold tracking-tight">JOIN</p>
         <p className="mt-1 text-[15px] text-ink-secondary">
           to{' '}
-          <a href={`sms:+1${SHUL_SMS_NUMBER.replace(/D/g, '')}&body=JOIN`} className="text-accent">
+          <a href={smsLink(SHUL_SMS_NUMBER, 'JOIN')} className="text-accent">
             {SHUL_SMS_NUMBER}
           </a>
         </p>
