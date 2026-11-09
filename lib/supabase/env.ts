@@ -1,6 +1,10 @@
 /**
- * The two environment variables the app needs. Only the publishable anon key
- * is ever used; a service-role key would bypass RLS and has no place here.
+ * The environment variables the app needs.
+ *
+ * The publishable anon key is what every ordinary request uses, so RLS does
+ * the deciding. The service-role key is the one exception and lives in
+ * `admin.ts`: it bypasses RLS and is read only by the texting webhook, which
+ * has no signed-in user to carry. It must never be NEXT_PUBLIC_.
  */
 
 function required(name: string, value: string | undefined): string {

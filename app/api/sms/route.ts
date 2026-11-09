@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { toE164 } from '@/lib/phone';
 import { classifyKeyword, isFromTwilio } from '@/lib/sms-inbound';
-import { supabaseServer } from '@/lib/supabase/server';
+import { adminConfigured, supabaseAdmin } from '@/lib/supabase/admin';
 
 /**
  * Where Twilio delivers a text somebody sent to the shul's number.
@@ -14,10 +14,23 @@ import { supabaseServer } from '@/lib/supabase/server';
  * Opting a man in from his own text is safe in a way the web form is not: the
  * number is the carrier's, not something typed into a box, so the man who
  * texted JOIN really does hold it.
+ *
+ * It talks to Supabase as the service role rather than through a cookie,
+ * because Twilio has no session. With the ordinary client this request lands
+ * as `anon`, and `people` is granted to `authenticated` only — so the lookup
+ * came back empty with no error, every man was treated as a stranger, and
+ * every JOIN was answered with a promise the app had not kept. See
+ * lib/supabase/admin.ts.
  */
 
 const JOINED =
   'Ohr Mattisyahu: You are now opted in to texts about night seder and morning learning. ' +
+  'Msg & data rates may apply. Reply HELP for help, STOP to opt out.';
+
+// He is not one of ours yet, so he is not told he is on the list. Saying so
+// is what made the bug invisible: the men believed it, and nobody chased it.
+const NOTED =
+  'Ohr Mattisyahu: Thanks, we have your number and will add you to the list shortly. ' +
   'Msg & data rates may apply. Reply HELP for help, STOP to opt out.';
 
 const LEFT = 'Ohr Mattisyahu: You will get no further texts. Reply JOIN to start again.';
@@ -41,6 +54,11 @@ export async function POST(request: NextRequest) {
   // Refuse rather than fall open: an unverified request could opt anyone in.
   if (!authToken) return new NextResponse('Not configured', { status: 503 });
 
+  // Refuse rather than half-work. Without the key every man reads as a
+  // stranger, which is a silent wrong answer — Twilio retries a 503, so a
+  // text that arrives during a misconfiguration is held rather than mishandled.
+  if (!adminConfigured()) return new NextResponse('Not configured', { status: 503 });
+
   const form = await request.formData();
   const params: Record<string, string> = {};
   for (const [key, value] of form.entries()) {
@@ -60,7 +78,7 @@ export async function POST(request: NextRequest) {
   if (!from || keyword === 'other') return twiml(null);
   if (keyword === 'help') return twiml(HELP);
 
-  const supabase = await supabaseServer();
+  const supabase = supabaseAdmin();
   const { data: people, error } = await supabase
     .from('people')
     .select('id, phone')
@@ -73,35 +91,39 @@ export async function POST(request: NextRequest) {
 
   if (keyword === 'stop') {
     if (matches.length > 0) {
-      await supabase
+      const { error: stopError } = await supabase
         .from('people')
         .update({ sms_opt_out: true, sms_opt_in: false })
         .in(
           'id',
           matches.map((person) => person.id),
         );
+      if (stopError) throw new Error(stopError.message);
     }
     // Twilio blocks him at its end regardless; this is so the app agrees.
     return twiml(LEFT);
   }
 
   if (matches.length > 0) {
-    await supabase
+    const { error: joinError } = await supabase
       .from('people')
       .update({ sms_opt_in: true, sms_opt_out: false })
       .in(
         'id',
         matches.map((person) => person.id),
       );
-  } else {
-    // A number we don't hold. Recorded for matching rather than dropped: it
-    // is somebody who asked to be on the list.
-    await supabase.from('sms_signups').insert({
-      last_name: 'Texted JOIN',
-      phone: from,
-      consent_text: `Texted "${(params.Body ?? '').trim().slice(0, 60)}" to the shul's number`,
-    });
+    if (joinError) throw new Error(joinError.message);
+    return twiml(JOINED);
   }
 
-  return twiml(JOINED);
+  // A number we don't hold. Recorded for matching rather than dropped: it
+  // is somebody who asked to be on the list.
+  const { error: signupError } = await supabase.from('sms_signups').insert({
+    last_name: 'Texted JOIN',
+    phone: from,
+    consent_text: `Texted "${(params.Body ?? '').trim().slice(0, 60)}" to the shul's number`,
+  });
+  if (signupError) throw new Error(signupError.message);
+
+  return twiml(NOTED);
 }
