@@ -115,3 +115,20 @@ export async function unsubscribeSignup(signupId: string) {
   if (error) throw new Error(error.message);
   revalidatePath('/', 'layout');
 }
+
+/**
+ * Put a dismissed signup back in the queue.
+ *
+ * Dismiss sits next to Tick for texts, so hitting the wrong one is a matter
+ * of a few millimetres. It never deleted anything — it only marked the row
+ * dealt with — so undoing it is just clearing that mark.
+ */
+export async function undismissSignup(signupId: string) {
+  const supabase = await supabaseServer();
+  const { error } = await supabase
+    .from('sms_signups')
+    .update({ handled_at: null })
+    .eq('id', signupId);
+  if (error) throw new Error(error.message);
+  revalidatePath('/', 'layout');
+}

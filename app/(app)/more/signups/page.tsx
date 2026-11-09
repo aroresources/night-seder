@@ -1,4 +1,9 @@
-import { SignupList, SubscribedList, type SignupRow } from '@/components/signup-list';
+import {
+  DismissedList,
+  SignupList,
+  SubscribedList,
+  type SignupRow,
+} from '@/components/signup-list';
 import { Empty, Group, LinkRow, Row, ScreenHeader } from '@/components/ui';
 import { formatForDisplay, toE164 } from '@/lib/phone';
 import { getPeople } from '@/lib/queries';
@@ -23,9 +28,11 @@ export default async function SignupsPage() {
     supabase
       .from('sms_signups')
       .select('*')
-      // Handled rows are gone from view, except the ones that are on the
-      // list in their own right — those have to stay visible to be stopped.
-      .or('handled_at.is.null,subscribed.is.true')
+      // Handled rows are gone from view, except two kinds that have to stay:
+      // the ones on the list in their own right, so they can be stopped, and
+      // the ones dismissed without being matched, so a mis-tap is undoable.
+      // Dismissing is one button away from ticking and deletes nothing.
+      .or('handled_at.is.null,subscribed.is.true,person_id.is.null')
       .order('created_at', { ascending: true }),
     getPeople(),
   ]);
@@ -51,11 +58,13 @@ export default async function SignupsPage() {
       match: match ?? null,
       subscribed: signup.subscribed,
       optedOut: signup.opted_out,
+      dismissed: signup.handled_at !== null && !signup.subscribed,
     };
   });
 
-  const waiting = rows.filter((row) => !row.subscribed);
+  const waiting = rows.filter((row) => !row.subscribed && !row.dismissed);
   const subscribed = rows.filter((row) => row.subscribed);
+  const dismissed = rows.filter((row) => row.dismissed);
   const justNames = people.map((p) => ({ id: p.id, name: p.name }));
 
   // Who is actually on the list. The question "who gets a text if I send one
@@ -101,6 +110,9 @@ export default async function SignupsPage() {
             {waiting.length > 0 ? <SignupList rows={waiting} people={justNames} /> : null}
             {subscribed.length > 0 ? (
               <SubscribedList rows={subscribed} people={justNames} />
+            ) : null}
+            {dismissed.length > 0 ? (
+              <DismissedList rows={dismissed} people={justNames} />
             ) : null}
           </>
         )}

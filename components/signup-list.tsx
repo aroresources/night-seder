@@ -7,6 +7,7 @@ import {
   acceptSignup,
   dismissSignup,
   subscribeSignup,
+  undismissSignup,
   unsubscribeSignup,
 } from '@/app/actions/signups';
 import { formatShortDate } from '@/lib/dates';
@@ -25,6 +26,8 @@ export interface SignupRow {
   subscribed: boolean;
   /** He texted STOP. Only he can undo that, by texting JOIN again. */
   optedOut: boolean;
+  /** Dealt with, but nobody was ticked. Undoable: nothing was deleted. */
+  dismissed: boolean;
 }
 
 /** Shared by both lists: run an action, refresh, and say so if it fails. */
@@ -222,6 +225,61 @@ function Subscribed({ row, people }: { row: SignupRow; people: { id: string; nam
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Dismissed, and still here.
+ *
+ * Shown rather than hidden because the only way to find one otherwise would
+ * be to go into the database, and because the button that puts a row here
+ * sits beside the one that ticks a man.
+ */
+export function DismissedList({
+  rows,
+  people,
+}: {
+  rows: SignupRow[];
+  people: { id: string; name: string }[];
+}) {
+  return (
+    <Group
+      title={`Dismissed (${rows.length})`}
+      footer="Nothing was deleted. Put one back if you meant to keep it."
+    >
+      {rows.map((row) => (
+        <Dismissed key={row.id} row={row} people={people} />
+      ))}
+    </Group>
+  );
+}
+
+function Dismissed({ row, people }: { row: SignupRow; people: { id: string; name: string }[] }) {
+  const { pending, run } = useAction();
+  const who = people.find((person) => person.id === row.match?.id);
+
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-baseline gap-2">
+        <span className="min-w-0 flex-1 truncate text-[17px] text-ink-secondary">{row.phone}</span>
+        <span className="shrink-0 text-[13px] text-ink-tertiary">
+          {formatShortDate(row.createdAt.slice(0, 10))}
+        </span>
+      </div>
+
+      <p className="mt-1 text-[13px] text-ink-tertiary">
+        {who ? `That number is ${who.name}.` : "Not a number we hold."}
+      </p>
+
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => run(() => undismissSignup(row.id))}
+        className="mt-1 min-h-[2.75rem] text-[15px] text-accent disabled:opacity-40"
+      >
+        Put it back
+      </button>
     </div>
   );
 }
