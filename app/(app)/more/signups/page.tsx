@@ -4,7 +4,7 @@ import {
   SubscribedList,
   type SignupRow,
 } from '@/components/signup-list';
-import { Empty, Group, LinkRow, Row, ScreenHeader } from '@/components/ui';
+import { Group, LinkRow, Row, ScreenHeader } from '@/components/ui';
 import { formatForDisplay, toE164 } from '@/lib/phone';
 import { getPeople } from '@/lib/queries';
 import { supabaseServer } from '@/lib/supabase/server';
@@ -100,22 +100,9 @@ export default async function SignupsPage() {
       />
 
       <div className="mx-auto w-full max-w-[480px] pb-tabbar">
-        {rows.length === 0 ? (
-          <Empty>
-            Nothing waiting. A man who texts JOIN from a number you hold is ticked straight
-            away; anyone else shows up here to be dealt with.
-          </Empty>
-        ) : (
-          <>
-            {waiting.length > 0 ? <SignupList rows={waiting} people={justNames} /> : null}
-            {subscribed.length > 0 ? (
-              <SubscribedList rows={subscribed} people={justNames} />
-            ) : null}
-            {dismissed.length > 0 ? (
-              <DismissedList rows={dismissed} people={justNames} />
-            ) : null}
-          </>
-        )}
+        {/* What needs doing comes first; the list it feeds comes next; the
+            two sets of leftovers sit below both. */}
+        {waiting.length > 0 ? <SignupList rows={waiting} people={justNames} /> : null}
 
         <Group
           title={`On the text list (${total})`}
@@ -147,6 +134,9 @@ export default async function SignupsPage() {
             </>
           )}
         </Group>
+
+        {subscribed.length > 0 ? <SubscribedList rows={subscribed} people={justNames} /> : null}
+        {dismissed.length > 0 ? <DismissedList rows={dismissed} people={justNames} /> : null}
 
         {askedToStop.length > 0 ? (
           <Group
