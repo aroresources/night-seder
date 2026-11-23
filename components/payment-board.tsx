@@ -27,6 +27,8 @@ export interface PaymentPersonRow {
   usualMethod: PaymentMethod | null;
   paidCents: number;
   payments: Payment[];
+  /** How he turned up over this period, per programme he is on. */
+  attendance: { label: string; percent: number; attended: number; expected: number }[];
 }
 
 /**
@@ -119,6 +121,25 @@ function PersonRow({ row, periodId }: { row: PaymentPersonRow; periodId: string 
               ? `Usually ${formatCents(row.expectedCents)}`
               : 'No usual amount set'}
           </p>
+          {/* What he actually turned up to over the period you are paying
+              for. The question you would otherwise go and look up in
+              Reports, asked at the moment the money is handed over. */}
+          {row.attendance.length > 0 ? (
+            <p className="text-[13px] text-ink-secondary">
+              {row.attendance.map((program, index) => (
+                <span key={program.label}>
+                  {index > 0 ? ' · ' : null}
+                  {program.label}{' '}
+                  <span className={program.percent < 50 ? 'text-danger' : 'text-ink'}>
+                    {program.percent}%
+                  </span>{' '}
+                  <span className="text-ink-tertiary">
+                    ({program.attended}/{program.expected})
+                  </span>
+                </span>
+              ))}
+            </p>
+          ) : null}
         </div>
 
         <div className="shrink-0 text-right">

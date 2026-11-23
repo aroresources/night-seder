@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { makeNightADayOff } from '@/app/actions/schedule';
+import { removeZmanDayOff } from '@/app/actions/zmanim';
 import { AttendanceBoard, type BoardGroup } from '@/components/attendance-board';
 import { DateHeader } from '@/components/date-header';
 import { DayOffButton } from '@/components/day-off-button';
@@ -50,7 +51,8 @@ export default async function TonightPage(props: PageProps<'/'>) {
   ]);
 
   const status = nightScheduleStatus(zman, daysOff, date);
-  const alreadyADayOff = daysOff.some((day) => day.date === date);
+  // The row itself, not just whether there is one: undoing needs its id.
+  const dayOff = daysOff.find((day) => day.date === date) ?? null;
   const byId = new Map<string, Person>(eligible.map((person) => [person.id, person]));
 
   const groups: BoardGroup[] = [];
@@ -127,14 +129,24 @@ export default async function TonightPage(props: PageProps<'/'>) {
         ) : !status.scheduled ? (
           <Banner
             action={
-              alreadyADayOff ? null : (
+              dayOff ? (
+                // Marking a day off is one tap and the wrong date is one tap
+                // away from the right one, so it has to be undoable. Deleting
+                // the row puts the night back on the schedule exactly as it
+                // was; nobody’s attendance was touched by making it off.
+                <form action={removeZmanDayOff.bind(null, dayOff.id)}>
+                  <button type="submit" className="min-h-[2.75rem] text-[17px] text-accent">
+                    It is not a day off
+                  </button>
+                </form>
+              ) : (
                 <DayOffButton label="Make tonight a day off" onConfirm={addDayOff} />
               )
             }
           >
             Not scheduled: {status.reason}. You can still mark who came.
           </Banner>
-        ) : alreadyADayOff ? null : (
+        ) : (
           <div className="px-4 pt-3">
             <DayOffButton label="Make tonight a day off" onConfirm={addDayOff} />
           </div>

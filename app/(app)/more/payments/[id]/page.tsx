@@ -4,9 +4,31 @@ import { notFound } from 'next/navigation';
 import { deletePaymentPeriod, updatePaymentPeriod } from '@/app/actions/payments';
 import { PaymentBoard, type PaymentPersonRow } from '@/components/payment-board';
 import { Button, Group, ScreenHeader, inputClasses } from '@/components/ui';
+import {
+  attendanceByPerson,
+  heldDatesInRange,
+  personStats,
+  type AttendanceRow,
+} from '@/lib/attendance';
 import { formatDateRange } from '@/lib/dates';
 import { formatCents } from '@/lib/money';
-import { getPaymentPeriod, getPayments, getPeople } from '@/lib/queries';
+import { getAllAttendance, getPaymentPeriod, getPayments, getPeople } from '@/lib/queries';
+import { MORNING_PROGRAMS } from '@/lib/types';
+
+/**
+ * The programmes a percentage means anything for.
+ *
+ * Misc is deliberately left out: nothing is scheduled for it, so there is no
+ * denominator, and "100%" for a man who came once would read as a good month.
+ */
+const SCHEDULED = [
+  { label: 'Night', table: 'night_attendance' as const, flag: 'in_night_seder' as const },
+  ...MORNING_PROGRAMS.filter((program) => program.daysOffTable !== null).map((program) => ({
+    label: program.label,
+    table: program.table,
+    flag: program.flag,
+  })),
+];
 
 export default async function PaymentPeriodPage(props: PageProps<'/more/payments/[id]'>) {
   const { id } = await props.params;
@@ -18,6 +40,23 @@ export default async function PaymentPeriodPage(props: PageProps<'/more/payments
   ]);
   if (!period) notFound();
 
+  // Only the sessions actually held inside the period being paid for, which
+  // is the same denominator Reports uses: a night nobody recorded is a
+  // mistake to fix, not a night everybody missed.
+  const attendancePer = await Promise.all(
+    SCHEDULED.map((program) =>
+      getAllAttendance(program.table, { start: period.start_date, end: period.end_date }),
+    ),
+  );
+  const programs = SCHEDULED.map((program, index) => {
+    const rows = attendancePer[index] as AttendanceRow[];
+    return {
+      ...program,
+      held: heldDatesInRange(rows, period.start_date, period.end_date),
+      byPerson: attendanceByPerson(rows),
+    };
+  });
+
   // Anyone who gets paid, plus anyone already paid in this period even if the
   // checkbox has since come off — the money still happened.
   const paidIds = new Set(payments.map((payment) => payment.person_id));
@@ -27,10 +66,25 @@ export default async function PaymentPeriodPage(props: PageProps<'/more/payments
       const theirs = payments
         .filter((payment) => payment.person_id === person.id)
         .sort((a, b) => (a.date_paid < b.date_paid ? 1 : a.date_paid > b.date_paid ? -1 : 0));
+      const attendance = programs
+        .filter((program) => person[program.flag])
+        .map((program) => {
+          const stats = personStats(person, program.held, program.byPerson.get(person.id));
+          return {
+            label: program.label,
+            percent: stats.percent,
+            attended: stats.attended,
+            expected: stats.expected,
+          };
+        })
+        // Nothing was held, so there is nothing to judge him on.
+        .filter((program) => program.expected > 0);
+
       return {
         id: person.id,
         name: person.name,
         role: person.role,
+        attendance,
         expectedCents: person.monthly_amount_cents,
         usualMethod: person.usual_payment_method,
         paidCents: theirs.reduce((sum, payment) => sum + payment.amount_cents, 0),

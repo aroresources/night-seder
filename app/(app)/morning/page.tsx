@@ -1,5 +1,5 @@
 import { addPersonToMorning, createPersonForMorning } from '@/app/actions/people';
-import { makeMorningADayOff } from '@/app/actions/schedule';
+import { makeMorningADayOff, removeMorningDayOff } from '@/app/actions/schedule';
 import { AddToDaf } from '@/components/add-to-daf';
 import { AttendanceBoard } from '@/components/attendance-board';
 import { DateHeader } from '@/components/date-header';
@@ -44,7 +44,8 @@ export default async function MorningPage(props: PageProps<'/morning'>) {
   // Misc is never scheduled and never off: you mark whoever turned up.
   const scheduled = program.daysOffTable !== null;
   const status = morningScheduleStatus(daysOff, date);
-  const alreadyADayOff = daysOff.some((day) => day.date === date);
+  // The row itself, not just whether there is one: undoing needs its id.
+  const dayOff = daysOff.find((day) => day.date === date) ?? null;
 
   const candidates = people
     .filter((person) => person.active && !person[program.flag])
@@ -77,14 +78,22 @@ export default async function MorningPage(props: PageProps<'/morning'>) {
         {!scheduled ? null : !status.scheduled ? (
           <Banner
             action={
-              alreadyADayOff ? null : (
+              dayOff && program.daysOffTable ? (
+                // Same as Tonight: a day off marked on the wrong date was
+                // unreachable from the screen that made it.
+                <form action={removeMorningDayOff.bind(null, program.daysOffTable, dayOff.id)}>
+                  <button type="submit" className="min-h-[2.75rem] text-[17px] text-accent">
+                    It is not a day off
+                  </button>
+                </form>
+              ) : (
                 <DayOffButton label="Make today a day off" onConfirm={addDayOff} />
               )
             }
           >
             Not scheduled: {status.reason}. You can still mark who came.
           </Banner>
-        ) : alreadyADayOff ? null : (
+        ) : (
           <div className="px-4 pt-3">
             <DayOffButton label="Make today a day off" onConfirm={addDayOff} />
           </div>
