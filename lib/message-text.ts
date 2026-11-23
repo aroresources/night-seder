@@ -11,8 +11,15 @@
  * stitches them back together: 153 and 67 rather than 160 and 70.
  */
 
-/** Appended so recipients are told how to stop, as the campaign promises. */
-export const OPT_OUT_SUFFIX = ' Reply STOP to stop.';
+/**
+ * Appended so recipients are told how to stop, as the campaign promises.
+ *
+ * On its own line with a blank one above it, so it reads as the small print
+ * it is rather than as part of the sentence about seder. The newlines are
+ * GSM-7 characters, so this costs one character more than a space did and
+ * does not change how the message is encoded.
+ */
+export const OPT_OUT_SUFFIX = '\n\nReply STOP to stop.';
 
 /** Characters GSM-7 can hold directly. */
 const GSM_BASIC =

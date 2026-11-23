@@ -83,3 +83,14 @@ test('the opt-out line is appended, and only once', () => {
 test('composeBody trims what was typed', () => {
   assert.equal(composeBody('  Seder at 8:30.  ', false), 'Seder at 8:30.');
 });
+
+test('the opt-out line stands apart from the message', () => {
+  const sent = composeBody('Seder at 8:30.', true);
+  assert.equal(sent, 'Seder at 8:30.\n\nReply STOP to stop.');
+  // A blank line between, not merely a new line.
+  assert.equal(sent.split('\n').length, 3);
+  assert.equal(sent.split('\n')[1], '');
+  // Still plain GSM-7: a newline is in the basic set, so adding it cannot
+  // quietly halve the characters a part holds.
+  assert.equal(measure(sent).encoding, 'GSM-7');
+});
